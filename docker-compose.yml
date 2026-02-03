@@ -1,0 +1,25 @@
+version: "3.8"
+
+services:
+  coolquick-dev:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: frontend-builder
+    volumes:
+      - .:/app
+      - /app/node_modules
+      - /app/src-tauri/target
+    ports:
+      - "1420:1420"
+    command: npm run dev
+    environment:
+      - NODE_ENV=development
+
+  coolquick-build:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    volumes:
+      - ./src-tauri/target:/app/src-tauri/target
+    command: echo "Build artifacts available in src-tauri/target"

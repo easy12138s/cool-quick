@@ -1,0 +1,391 @@
+use rusqlite::{params, Connection, Result};
+use chrono::Utc;
+use uuid::Uuid;
+
+use crate::detector::ContentType;
+use crate::models::{Note, NoteStats};
+
+pub struct Database {
+    conn: Connection,
+}
+
+impl Database {
+    pub fn new(db_path: &str) -> Result<Self> {
+        let conn = Connection::open(db_path)?;
+        let db = Self { conn };
+        db.initialize_tables()?;
+        Ok(db)
+    }
+
+    fn initialize_tables(&self) -> Result<()> {
+        self.conn.execute_batch(
+            "
+            CREATE TABLE IF NOT EXISTS notes (
+                id TEXT PRIMARY KEY,
+                content TEXT NOT NULL,
+                note_type TEXT NOT NULL,
+                tags TEXT DEFAULT '[]',
+                source_app TEXT DEFAULT '',
+                created_at INTEGER NOT NULL,
+                updated_at INTEGER NOT NULL,
+                is_favorite INTEGER DEFAULT 0,
+                is_archived INTEGER DEFAULT 0,
+                use_count INTEGER DEFAULT 0
+            );
+            
+            CREATE INDEX IF NOT EXISTS idx_notes_created ON notes(created_at DESC);
+            CREATE INDEX IF NOT EXISTS idx_notes_type ON notes(note_type);
+            CREATE INDEX IF NOT EXISTS idx_notes_favorite ON notes(is_favorite);
+            CREATE INDEX IF NOT EXISTS idx_notes_archived ON notes(is_archived);
+            
+            CREATE TABLE IF NOT EXISTS custom_rules (
+                id TEXT PRIMARY KEY,
+                name TEXT NOT NULL,
+                pattern TEXT NOT NULL,
+                action_type TEXT NOT NULL,
+                is_enabled INTEGER DEFAULT 1,
+                created_at INTEGER NOT NULL
+            );
+            
+            -- Add window_positions table for storing window locations
+            CREATE TABLE IF NOT EXISTS window_positions (
+                window_name TEXT PRIMARY KEY,
+                x REAL NOT NULL,
+                y REAL NOT NULL,
+                updated_at INTEGER NOT NULL
+            );
+            "
+        )?;
+        Ok(())
+    }
+
+    pub fn save_note(&self, content: &str, note_type: ContentType, tags: &str, source_app: &str) -> Result<String> {
+        let id = Uuid::new_v4().to_string();
+        let now = Utc::now().timestamp();
+        
+        self.conn.execute(
+            "INSERT INTO notes (id, content, note_type, tags, source_app, created_at, updated_at, is_favorite, is_archived, use_count)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, 0, 0, 0)",
+            params![&id, content, note_type.to_string(), tags, source_app, now, now],
+        )?;
+        
+        Ok(id)
+    }
+
+    pub fn get_notes(&self, limit: i64, offset: i64, include_archived: bool) -> Result<Vec<Note>> {
+        let sql = if include_archived {
+            "SELECT * FROM notes ORDER BY created_at DESC LIMIT ?1 OFFSET ?2"
+        } else {
+            "SELECT * FROM notes WHERE is_archived = 0 ORDER BY created_at DESC LIMIT ?1 OFFSET ?2"
+        };
+        
+        let mut stmt = self.conn.prepare(sql)?;
+        let notes = stmt.query_map(params![limit, offset], |row| {
+            Ok(Note {
+                id: row.get(0)?,
+                content: row.get(1)?,
+                note_type: row.get(2)?,
+                tags: serde_json::from_str(&row.get::<_, String>(3)?).unwrap_or_default(),
+                source_app: row.get(4)?,
+                created_at: row.get(5)?,
+                updated_at: row.get(6)?,
+                is_favorite: row.get::<_, i32>(7)? != 0,
+                is_archived: row.get::<_, i32>(8)? != 0,
+                use_count: row.get(9)?,
+            })
+        })?;
+        
+        notes.collect::<Result<Vec<_>>>()
+    }
+
+    pub fn get_note_by_id(&self, id: &str) -> Result<Option<Note>> {
+        let mut stmt = self.conn.prepare("SELECT * FROM notes WHERE id = ?1")?;
+        let mut rows = stmt.query(params![id])?;
+        
+        if let Some(row) = rows.next()? {
+            Ok(Some(Note {
+                id: row.get(0)?,
+                content: row.get(1)?,
+                note_type: row.get(2)?,
+                tags: serde_json::from_str(&row.get::<_, String>(3)?).unwrap_or_default(),
+                source_app: row.get(4)?,
+                created_at: row.get(5)?,
+                updated_at: row.get(6)?,
+                is_favorite: row.get::<_, i32>(7)? != 0,
+                is_archived: row.get::<_, i32>(8)? != 0,
+                use_count: row.get(9)?,
+            }))
+        } else {
+            Ok(None)
+        }
+    }
+
+    pub fn search_notes(&self, query: &str, note_type: Option<&str>, limit: i64) -> Result<Vec<Note>> {
+        let sql = match note_type {
+            Some(t) => "SELECT * FROM notes WHERE content LIKE ?1 AND note_type = ?2 AND is_archived = 0 ORDER BY created_at DESC LIMIT ?3",
+            None => "SELECT * FROM notes WHERE content LIKE ?1 AND is_archived = 0 ORDER BY created_at DESC LIMIT ?3",
+        };
+        
+        let search_pattern = format!("%{}%", query);
+        let mut stmt = self.conn.prepare(sql)?;
+        
+        let notes = if let Some(t) = note_type {
+            stmt.query_map(params![search_pattern, t, limit], |row| {
+                Ok(Note {
+                    id: row.get(0)?,
+                    content: row.get(1)?,
+                    note_type: row.get(2)?,
+                    tags: serde_json::from_str(&row.get::<_, String>(3)?).unwrap_or_default(),
+                    source_app: row.get(4)?,
+                    created_at: row.get(5)?,
+                    updated_at: row.get(6)?,
+                    is_favorite: row.get::<_, i32>(7)? != 0,
+                    is_archived: row.get::<_, i32>(8)? != 0,
+                    use_count: row.get(9)?,
+                })
+            })?
+        } else {
+            stmt.query_map(params![search_pattern, limit], |row| {
+                Ok(Note {
+                    id: row.get(0)?,
+                    content: row.get(1)?,
+                    note_type: row.get(2)?,
+                    tags: serde_json::from_str(&row.get::<_, String>(3)?).unwrap_or_default(),
+                    source_app: row.get(4)?,
+                    created_at: row.get(5)?,
+                    updated_at: row.get(6)?,
+                    is_favorite: row.get::<_, i32>(7)? != 0,
+                    is_archived: row.get::<_, i32>(8)? != 0,
+                    use_count: row.get(9)?,
+                })
+            })?
+        };
+        
+        notes.collect::<Result<Vec<_>>>()
+    }
+
+    pub fn update_note(&self, id: &str, content: Option<&str>, note_type: Option<&str>, tags: Option<Vec<String>>, is_favorite: Option<bool>) -> Result<()> {
+        let now = Utc::now().timestamp();
+        
+        if let Some(c) = content {
+            self.conn.execute(
+                "UPDATE notes SET content = ?1, updated_at = ?2 WHERE id = ?3",
+                params![c, now, id],
+            )?;
+        }
+        
+        if let Some(t) = note_type {
+            self.conn.execute(
+                "UPDATE notes SET note_type = ?1, updated_at = ?2 WHERE id = ?3",
+                params![t, now, id],
+            )?;
+        }
+        
+        if let Some(tags_vec) = tags {
+            let tags_json = serde_json::to_string(&tags_vec).unwrap_or_default();
+            self.conn.execute(
+                "UPDATE notes SET tags = ?1, updated_at = ?2 WHERE id = ?3",
+                params![tags_json, now, id],
+            )?;
+        }
+        
+        if let Some(f) = is_favorite {
+            self.conn.execute(
+                "UPDATE notes SET is_favorite = ?1, updated_at = ?2 WHERE id = ?3",
+                params![f as i32, now, id],
+            )?;
+        }
+        
+        Ok(())
+    }
+
+    pub fn delete_note(&self, id: &str) -> Result<()> {
+        self.conn.execute("DELETE FROM notes WHERE id = ?1", params![id])?;
+        Ok(())
+    }
+
+    pub fn archive_note_by_id(&self, id: &str) -> Result<()> {
+        let now = Utc::now().timestamp();
+        self.conn.execute(
+            "UPDATE notes SET is_archived = 1, updated_at = ?1 WHERE id = ?2",
+            params![now, id],
+        )?;
+        Ok(())
+    }
+
+    pub fn unarchive_note_by_id(&self, id: &str) -> Result<()> {
+        let now = Utc::now().timestamp();
+        self.conn.execute(
+            "UPDATE notes SET is_archived = 0, updated_at = ?1 WHERE id = ?2",
+            params![now, id],
+        )?;
+        Ok(())
+    }
+
+    pub fn archive_notes_by_date(&self, days: i64) -> Result<i64> {
+        let cutoff = Utc::now().timestamp() - (days * 24 * 60 * 60);
+        let count = self.conn.execute(
+            "UPDATE notes SET is_archived = 1, updated_at = ?1 WHERE created_at < ?2 AND is_archived = 0",
+            params![Utc::now().timestamp(), cutoff],
+        )?;
+        Ok(count as i64)
+    }
+
+    pub fn archive_notes_by_type(&self, note_type: &str, days: i64) -> Result<i64> {
+        let cutoff = Utc::now().timestamp() - (days * 24 * 60 * 60);
+        let count = self.conn.execute(
+            "UPDATE notes SET is_archived = 1, updated_at = ?1 WHERE note_type = ?2 AND created_at < ?3 AND is_archived = 0",
+            params![Utc::now().timestamp(), note_type, cutoff],
+        )?;
+        Ok(count as i64)
+    }
+
+    pub fn get_archived_notes(&self, limit: i64, offset: i64) -> Result<Vec<Note>> {
+        let mut stmt = self.conn.prepare(
+            "SELECT * FROM notes WHERE is_archived = 1 ORDER BY created_at DESC LIMIT ?1 OFFSET ?2"
+        )?;
+        
+        let notes = stmt.query_map(params![limit, offset], |row| {
+            Ok(Note {
+                id: row.get(0)?,
+                content: row.get(1)?,
+                note_type: row.get(2)?,
+                tags: serde_json::from_str(&row.get::<_, String>(3)?).unwrap_or_default(),
+                source_app: row.get(4)?,
+                created_at: row.get(5)?,
+                updated_at: row.get(6)?,
+                is_favorite: row.get::<_, i32>(7)? != 0,
+                is_archived: row.get::<_, i32>(8)? != 0,
+                use_count: row.get(9)?,
+            })
+        })?;
+        
+        notes.collect::<Result<Vec<_>>>()
+    }
+
+    pub fn get_recently_used_notes(&self, limit: i64) -> Result<Vec<Note>> {
+        let mut stmt = self.conn.prepare(
+            "SELECT * FROM notes WHERE is_archived = 0 ORDER BY use_count DESC, updated_at DESC LIMIT ?1"
+        )?;
+        
+        let notes = stmt.query_map(params![limit], |row| {
+            Ok(Note {
+                id: row.get(0)?,
+                content: row.get(1)?,
+                note_type: row.get(2)?,
+                tags: serde_json::from_str(&row.get::<_, String>(3)?).unwrap_or_default(),
+                source_app: row.get(4)?,
+                created_at: row.get(5)?,
+                updated_at: row.get(6)?,
+                is_favorite: row.get::<_, i32>(7)? != 0,
+                is_archived: row.get::<_, i32>(8)? != 0,
+                use_count: row.get(9)?,
+            })
+        })?;
+        
+        notes.collect::<Result<Vec<_>>>()
+    }
+
+    pub fn import_note(&self, note: &Note) -> Result<()> {
+        let tags_json = serde_json::to_string(&note.tags).unwrap_or_default();
+        self.conn.execute(
+            "INSERT OR REPLACE INTO notes (id, content, note_type, tags, source_app, created_at, updated_at, is_favorite, is_archived, use_count)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)",
+            params![
+                &note.id,
+                &note.content,
+                &note.note_type,
+                tags_json,
+                &note.source_app,
+                note.created_at,
+                note.updated_at,
+                note.is_favorite as i32,
+                note.is_archived as i32,
+                note.use_count
+            ],
+        )?;
+        Ok(())
+    }
+
+    pub fn export_to_json(&self) -> Result<String> {
+        let notes = self.get_notes(10000, 0, true)?;
+        let json = serde_json::to_string_pretty(&notes).map_err(|e| {
+            rusqlite::Error::ToSqlConversionFailure(Box::new(e))
+        })?;
+        Ok(json)
+    }
+
+    pub fn get_stats(&self) -> Result<NoteStats> {
+        let now = Utc::now().timestamp();
+        let today_start = now - (now % 86400); // Start of today
+        let week_start = now - (7 * 24 * 60 * 60);
+
+        let total: i64 = self.conn.query_row(
+            "SELECT COUNT(*) FROM notes WHERE is_archived = 0",
+            [],
+            |row| row.get(0)
+        )?;
+
+        let today: i64 = self.conn.query_row(
+            "SELECT COUNT(*) FROM notes WHERE is_archived = 0 AND created_at >= ?1",
+            params![today_start],
+            |row| row.get(0)
+        )?;
+
+        let week: i64 = self.conn.query_row(
+            "SELECT COUNT(*) FROM notes WHERE is_archived = 0 AND created_at >= ?1",
+            params![week_start],
+            |row| row.get(0)
+        )?;
+
+        let favorite: i64 = self.conn.query_row(
+            "SELECT COUNT(*) FROM notes WHERE is_archived = 0 AND is_favorite = 1",
+            [],
+            |row| row.get(0)
+        )?;
+
+        let mut stmt = self.conn.prepare(
+            "SELECT note_type, COUNT(*) FROM notes WHERE is_archived = 0 GROUP BY note_type"
+        )?;
+        
+        let by_type: std::collections::HashMap<String, i64> = stmt
+            .query_map([], |row| {
+                Ok((row.get::<_, String>(0)?, row.get::<_, i64>(1)?))
+            })?
+            .filter_map(|r| r.ok())
+            .collect();
+
+        Ok(NoteStats {
+            total,
+            today,
+            week,
+            favorite,
+            by_type,
+        })
+    }
+
+    pub fn save_window_position(&self, window_name: &str, x: f64, y: f64) -> Result<()> {
+        let now = Utc::now().timestamp();
+        self.conn.execute(
+            "INSERT OR REPLACE INTO window_positions (window_name, x, y, updated_at)
+             VALUES (?1, ?2, ?3, ?4)",
+            params![window_name, x, y, now],
+        )?;
+        Ok(())
+    }
+
+    pub fn get_window_position(&self, window_name: &str) -> Result<Option<(f64, f64)>> {
+        let mut stmt = self.conn.prepare(
+            "SELECT x, y FROM window_positions WHERE window_name = ?1"
+        )?;
+        let mut rows = stmt.query(params![window_name])?;
+        
+        if let Some(row) = rows.next()? {
+            let x: f64 = row.get(0)?;
+            let y: f64 = row.get(1)?;
+            Ok(Some((x, y)))
+        } else {
+            Ok(None)
+        }
+    }
+}

@@ -1,0 +1,57 @@
+[package]
+name = "coolquick"
+version = "0.1.0"
+description = "A smart clipboard manager with quick note-taking capabilities"
+authors = ["CoolQuick Team"]
+license = "MIT"
+repository = "https://github.com/coolquick/coolquick"
+edition = "2021"
+rust-version = "1.70"
+
+[profile.release]
+panic = "abort"
+codegen-units = 1
+lto = true
+opt-level = 3
+strip = true
+
+[profile.dev]
+opt-level = 1
+
+[build-dependencies]
+tauri-build = { version = "1.5", features = [] }
+
+[dependencies]
+tauri = { version = "1.5", features = ["shell-open", "system-tray", "global-shortcut", "window-all"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+tokio = { version = "1.35", features = ["full"] }
+regex = "1.10"
+chrono = { version = "0.4", features = ["serde"] }
+uuid = { version = "1.6", features = ["v4", "serde"] }
+once_cell = "1.19"
+parking_lot = "0.12"
+thiserror = "1.0"
+anyhow = "1.0"
+
+# Clipboard
+clipboard-master = "3.1"
+arboard = "3.3"
+
+# Database
+rusqlite = { version = "0.30", features = ["bundled", "chrono", "uuid"] }
+
+# Security
+aes-gcm = "0.10"
+bcrypt = "0.15"
+rand = "0.8"
+
+# Utilities
+dirs = "5.0"
+base64 = "0.21"
+flate2 = "1.0"
+tempfile = "3.8"
+
+[features]
+default = ["custom-protocol"]
+custom-protocol = ["tauri/custom-protocol"]
