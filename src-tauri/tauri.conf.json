@@ -1,4 +1,5 @@
 {
+  "$schema": "../node_modules/@tauri-apps/cli/schema.json",
   "productName": "CoolQuick",
   "version": "0.1.0",
   "identifier": "com.coolquick.app",
@@ -9,68 +10,13 @@
     "frontendDist": "../dist"
   },
   "app": {
-    "withGlobalTauri": false,
     "windows": [
       {
-        "label": "floating",
+        "label": "main",
         "title": "CoolQuick",
-        "width": 60,
-        "height": 60,
-        "resizable": false,
-        "maximizable": false,
-        "minimizable": false,
-        "decorations": false,
-        "alwaysOnTop": true,
-        "skipTaskbar": true,
-        "visible": true,
-        "transparent": true,
-        "center": false,
-        "x": 100,
-        "y": 100
-      },
-      {
-        "label": "drawer",
-        "title": "CoolQuick Notes",
-        "width": 350,
-        "height": 500,
-        "resizable": false,
-        "maximizable": false,
-        "minimizable": false,
-        "decorations": false,
-        "alwaysOnTop": true,
-        "skipTaskbar": true,
-        "visible": false,
-        "transparent": true,
-        "center": false
-      },
-      {
-        "label": "popup",
-        "title": "Clip Detected",
-        "width": 360,
-        "height": 200,
-        "resizable": false,
-        "maximizable": false,
-        "minimizable": false,
-        "decorations": false,
-        "alwaysOnTop": true,
-        "skipTaskbar": true,
-        "visible": false,
-        "transparent": true,
-        "center": false
-      },
-      {
-        "label": "settings",
-        "title": "CoolQuick Settings",
-        "width": 700,
-        "height": 600,
+        "width": 1200,
+        "height": 800,
         "resizable": true,
-        "maximizable": true,
-        "minimizable": true,
-        "decorations": true,
-        "alwaysOnTop": false,
-        "skipTaskbar": false,
-        "visible": false,
-        "transparent": false,
         "center": true
       }
     ],
@@ -84,14 +30,8 @@
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",
-      "icons/128x128@2x.png",
       "icons/icon.ico"
     ],
-    "category": "Productivity",
-    "shortDescription": "Smart clipboard manager",
-    "longDescription": "A smart clipboard manager that automatically detects and organizes your copied content with quick note-taking capabilities.",
-    "macOS": {
-      "minimumSystemVersion": "10.15"
-    }
+    "category": "Productivity"
   }
 }
