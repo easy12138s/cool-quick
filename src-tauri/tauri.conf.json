@@ -1,93 +1,15 @@
 {
+  "productName": "CoolQuick",
+  "version": "0.1.0",
+  "identifier": "com.coolquick.app",
   "build": {
     "beforeDevCommand": "npm run dev",
     "beforeBuildCommand": "npm run build",
-    "devPath": "http://localhost:1420",
-    "distDir": "../dist",
-    "withGlobalTauri": false
+    "devUrl": "http://localhost:1420",
+    "frontendDist": "../dist"
   },
-  "tauri": {
-    "allowlist": {
-      "all": false,
-      "shell": {
-        "all": false,
-        "open": true
-      },
-      "window": {
-        "all": true,
-        "center": true,
-        "close": true,
-        "create": true,
-        "hide": true,
-        "maximize": true,
-        "minimize": true,
-        "print": true,
-        "requestUserAttention": true,
-        "setAlwaysOnTop": true,
-        "setDecorations": true,
-        "setFocus": true,
-        "setFullscreen": true,
-        "setIcon": true,
-        "setMaxSize": true,
-        "setMinSize": true,
-        "setPosition": true,
-        "setResizable": true,
-        "setSize": true,
-        "setSkipTaskbar": true,
-        "setTitle": true,
-        "show": true,
-        "startDragging": true,
-        "unmaximize": true,
-        "unminimize": true
-      },
-      "globalShortcut": {
-        "all": true
-      },
-      "notification": {
-        "all": true
-      },
-      "os": {
-        "all": true
-      }
-    },
-    "bundle": {
-      "active": true,
-      "targets": "all",
-      "identifier": "com.coolquick.app",
-      "icon": [
-        "icons/32x32.png",
-        "icons/128x128.png",
-        "icons/128x128@2x.png",
-        "icons/icon.ico"
-      ],
-      "category": "Productivity",
-      "shortDescription": "Smart clipboard manager",
-      "longDescription": "A smart clipboard manager that automatically detects and organizes your copied content with quick note-taking capabilities.",
-      "deb": {
-        "depends": []
-      },
-      "macOS": {
-        "frameworks": [],
-        "minimumSystemVersion": "10.15",
-        "license": "MIT"
-      },
-      "windows": {
-        "certificateThumbprint": null,
-        "digestAlgorithm": "sha256",
-        "timestampUrl": ""
-      }
-    },
-    "security": {
-      "csp": null
-    },
-    "updater": {
-      "active": false
-    },
-    "systemTray": {
-      "iconPath": "icons/icon.png",
-      "iconAsTemplate": true,
-      "menuOnLeftClick": false
-    },
+  "app": {
+    "withGlobalTauri": false,
     "windows": [
       {
         "label": "floating",
@@ -151,6 +73,35 @@
         "transparent": false,
         "center": true
       }
-    ]
+    ],
+    "security": {
+      "csp": null
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": "all",
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.ico"
+    ],
+    "category": "Productivity",
+    "shortDescription": "Smart clipboard manager",
+    "longDescription": "A smart clipboard manager that automatically detects and organizes your copied content with quick note-taking capabilities.",
+    "deb": {
+      "depends": []
+    },
+    "macOS": {
+      "frameworks": [],
+      "minimumSystemVersion": "10.15",
+      "license": "MIT"
+    },
+    "windows": {
+      "certificateThumbprint": null,
+      "digestAlgorithm": "sha256",
+      "timestampUrl": ""
+    }
   }
 }
