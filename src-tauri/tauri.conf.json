@@ -1,15 +1,39 @@
 {
-  "$schema": "../node_modules/@tauri-apps/cli/schema.json",
-  "productName": "CoolQuick",
-  "version": "0.1.0",
-  "identifier": "com.coolquick.app",
   "build": {
     "beforeDevCommand": "npm run dev",
     "beforeBuildCommand": "npm run build",
-    "devUrl": "http://localhost:1420",
-    "frontendDist": "../dist"
+    "devPath": "http://localhost:1420",
+    "distDir": "../dist",
+    "withGlobalTauri": false
   },
-  "app": {
+  "tauri": {
+    "allowlist": {
+      "all": false,
+      "shell": {
+        "all": false,
+        "open": true
+      },
+      "window": {
+        "all": true
+      },
+      "globalShortcut": {
+        "all": true
+      }
+    },
+    "bundle": {
+      "active": true,
+      "targets": "all",
+      "identifier": "com.coolquick.app",
+      "icon": [
+        "icons/32x32.png",
+        "icons/128x128.png",
+        "icons/icon.ico"
+      ],
+      "category": "Productivity"
+    },
+    "security": {
+      "csp": null
+    },
     "windows": [
       {
         "label": "main",
@@ -19,19 +43,6 @@
         "resizable": true,
         "center": true
       }
-    ],
-    "security": {
-      "csp": null
-    }
-  },
-  "bundle": {
-    "active": true,
-    "targets": "all",
-    "icon": [
-      "icons/32x32.png",
-      "icons/128x128.png",
-      "icons/icon.ico"
-    ],
-    "category": "Productivity"
+    ]
   }
 }

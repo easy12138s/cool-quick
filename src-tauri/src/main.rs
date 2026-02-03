@@ -1,5 +1,5 @@
 use std::sync::Arc;
-use tauri::{generate_context, generate_handler, Manager};
+use tauri::{generate_context, generate_handler, Builder, Manager};
 
 mod clipboard;
 mod commands;
@@ -21,11 +21,10 @@ fn main() {
     let db = Database::new(&config.db_path).expect("Failed to initialize database");
     let db = Arc::new(db);
 
-    tauri::Builder::default()
+    Builder::default()
         .manage(db.clone())
         .manage(config.clone())
         .invoke_handler(generate_handler![
-            // Notes commands
             commands::notes::notes_get_all,
             commands::notes::notes_get_by_id,
             commands::notes::notes_create,
@@ -38,15 +37,12 @@ fn main() {
             commands::notes::notes_export,
             commands::notes::notes_import,
             commands::notes::notes_get_stats,
-            // Config commands
             commands::config::config_get,
             commands::config::config_update,
             commands::config::config_reset,
-            // Clipboard commands
             commands::clipboard::clipboard_get_text,
             commands::clipboard::clipboard_set_text,
             commands::clipboard::clipboard_get_history,
-            // Window commands
             commands::window::window_show_floating,
             commands::window::window_hide_floating,
             commands::window::window_toggle_floating,
@@ -58,8 +54,6 @@ fn main() {
         ])
         .setup(|app| {
             let app_handle = app.handle();
-            
-            // Initialize clipboard monitoring
             let db_clone = db.clone();
             let config_clone = config.clone();
             
