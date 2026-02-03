@@ -90,18 +90,8 @@
     "category": "Productivity",
     "shortDescription": "Smart clipboard manager",
     "longDescription": "A smart clipboard manager that automatically detects and organizes your copied content with quick note-taking capabilities.",
-    "deb": {
-      "depends": []
-    },
     "macOS": {
-      "frameworks": [],
-      "minimumSystemVersion": "10.15",
-      "license": "MIT"
-    },
-    "windows": {
-      "certificateThumbprint": null,
-      "digestAlgorithm": "sha256",
-      "timestampUrl": ""
+      "minimumSystemVersion": "10.15"
     }
   }
 }
