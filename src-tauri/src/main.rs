@@ -44,26 +44,37 @@ fn main() {
             commands::clipboard::clipboard_get_text,
             commands::clipboard::clipboard_set_text,
             commands::clipboard::clipboard_get_history,
-            commands::window::window_show_floating,
-            commands::window::window_hide_floating,
-            commands::window::window_toggle_floating,
-            commands::window::window_show_drawer,
-            commands::window::window_hide_drawer,
-            commands::window::window_show_settings,
-            commands::window::window_start_drag,
-            commands::window::window_set_position,
-            commands::window::window_hide_popup,
-        ])
-        .setup(move |app| {
-            let app_handle = app.handle();
-            
-            std::thread::spawn(move || {
-                let mut manager = ClipboardManager::new(db, config, app_handle);
-                manager.start_monitoring();
-            });
-            
-            Ok(())
-        })
+commands::window::window_show_floating,
+      commands::window::window_hide_floating,
+      commands::window::window_toggle_floating,
+      commands::window::window_show_drawer,
+      commands::window::window_hide_drawer,
+      commands::window::window_show_settings,
+      commands::window::window_show_main,
+      commands::window::window_start_drag,
+      commands::window::window_set_position,
+      commands::window::window_hide_popup,
+    ])
+.setup(move |app| {
+    let app_handle = app.handle();
+    
+    // 监听主窗口关闭事件，关闭时退出应用
+    let main_window = app.get_window("main").expect("Main window not found");
+    let app_handle_clone = app_handle.clone();
+    main_window.on_window_event(move |event| {
+      if let tauri::WindowEvent::CloseRequested { api, .. } = event {
+        api.prevent_close();
+        app_handle_clone.exit(0);
+      }
+    });
+
+    std::thread::spawn(move || {
+      let mut manager = ClipboardManager::new(db, config, app_handle);
+      manager.start_monitoring();
+    });
+
+    Ok(())
+  })
         .run(generate_context!())
         .expect("error while running tauri application");
 }

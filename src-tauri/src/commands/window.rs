@@ -32,8 +32,14 @@ pub async fn window_hide_drawer(app: AppHandle) -> Result<(), String> {
 
 #[command]
 pub async fn window_show_settings(app: AppHandle) -> Result<(), String> {
-    crate::window::show_settings_window(&app);
-    Ok(())
+  crate::window::show_settings_window(&app);
+  Ok(())
+}
+
+#[command]
+pub async fn window_show_main(app: AppHandle) -> Result<(), String> {
+  crate::window::show_main_window(&app);
+  Ok(())
 }
 
 #[command]

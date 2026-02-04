@@ -128,9 +128,16 @@ pub fn hide_popup_window(app: &AppHandle) {
 }
 
 pub fn show_settings_window(app: &AppHandle) {
-    if let Some(window) = app.get_window("settings") {
-        window.show().unwrap();
-        window.set_focus().unwrap();
-        window.center().unwrap();
-    }
+  if let Some(window) = app.get_window("settings") {
+    window.show().unwrap();
+    window.set_focus().unwrap();
+    window.center().unwrap();
+  }
+}
+
+pub fn show_main_window(app: &AppHandle) {
+  if let Some(window) = app.get_window("main") {
+    window.show().unwrap();
+    window.set_focus().unwrap();
+  }
 }
