@@ -1,6 +1,5 @@
 use regex::Regex;
 use std::collections::HashMap;
-use once_cell::sync::Lazy;
 
 #[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "snake_case")]
@@ -9,7 +8,6 @@ pub enum ContentType {
     Email,
     Url,
     Code,
-    Password,
     Text,
 }
 
@@ -20,7 +18,6 @@ impl ContentType {
             ContentType::Email => "email",
             ContentType::Url => "url",
             ContentType::Code => "code",
-            ContentType::Password => "password",
             ContentType::Text => "text",
         }.to_string()
     }
@@ -31,7 +28,6 @@ impl ContentType {
             ContentType::Email => "✉️",
             ContentType::Url => "🔗",
             ContentType::Code => "💻",
-            ContentType::Password => "🔐",
             ContentType::Text => "📝",
         }
     }
@@ -96,35 +92,11 @@ impl ContentDetector {
             return ContentType::Url;
         }
         
-        // Check password (high entropy)
-        if self.is_password(trimmed) {
-            return ContentType::Password;
-        }
-        
         // Check code
         if self.patterns.get("code_braces").unwrap().is_match(trimmed) {
             return ContentType::Code;
         }
         
         ContentType::Text
-    }
-
-    fn is_password(&self, content: &str) -> bool {
-        if content.len() < 8 {
-            return false;
-        }
-        
-        let has_upper = content.chars().any(|c| c.is_ascii_uppercase());
-        let has_lower = content.chars().any(|c| c.is_ascii_lowercase());
-        let has_digit = content.chars().any(|c| c.is_ascii_digit());
-        let has_special = content.chars().any(|c| !c.is_alphanumeric());
-        
-        // High entropy: multiple character types
-        let entropy_score = [has_upper, has_lower, has_digit, has_special]
-            .iter()
-            .filter(|&&x| x)
-            .count();
-        
-        entropy_score >= 3 && content.len() >= 10
     }
 }

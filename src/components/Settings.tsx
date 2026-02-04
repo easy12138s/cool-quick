@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { 
-  X, Moon, Sun, Monitor, Type, Bell, Shield, 
+  X, Moon, Sun, Monitor, 
   Download, Trash2, Save, RotateCcw, Check,
   Keyboard, Clock, Database, Palette
 } from 'lucide-react'
 import { invoke } from '@tauri-apps/api/tauri'
-import { AppConfig } from '../App'
+import type { AppConfig } from '../types'
 
 interface SettingsProps {
   config: AppConfig
@@ -25,7 +25,7 @@ const Settings: React.FC<SettingsProps> = ({ config, onConfigChange, onClose }) 
   }, [config])
 
   const handleChange = <K extends keyof AppConfig>(key: K, value: AppConfig[K]) => {
-    setLocalConfig(prev => ({ ...prev, [key]: value }))
+    setLocalConfig((prev: AppConfig) => ({ ...prev, [key]: value }))
     setHasChanges(true)
   }
 

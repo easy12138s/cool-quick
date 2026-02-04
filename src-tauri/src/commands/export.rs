@@ -2,7 +2,7 @@ use std::sync::Arc;
 use tauri::State;
 use crate::services::pdf_service::PdfService;
 use crate::database::Database;
-use base64::encode;
+use base64::{Engine as _, engine::general_purpose};
 
 #[tauri::command]
 pub async fn export_to_pdf(
@@ -25,10 +25,10 @@ pub async fn export_to_pdf(
 
     let pdf_service = PdfService::new();
     let pdf_bytes = pdf_service.generate_pdf(&notes, include_metadata)
-        .map_err(|e| e.to_string())?;
+        .map_err(|e: String| e)?;
 
     // Convert to base64 for transfer
-    let base64_string = encode(&pdf_bytes);
+    let base64_string = general_purpose::STANDARD.encode(&pdf_bytes);
     Ok(base64_string)
 }
 
@@ -59,8 +59,8 @@ pub async fn export_to_txt(
         output.push_str(&format!("Note #{}\n", i + 1));
         output.push_str(&format!("Type: {}\n", note.note_type));
         output.push_str(&format!("Created: {}\n", 
-            chrono::DateTime::from_timestamp_opt(note.created_at, 0)
-                .map(|d| d.format("%Y-%m-%d %H:%M:%S").to_string())
+            chrono::DateTime::from_timestamp_secs(note.created_at)
+                .map(|d: chrono::DateTime<chrono::Utc>| d.format("%Y-%m-%d %H:%M:%S").to_string())
                 .unwrap_or_default()));
         output.push_str(&format!("Content:\n{}\n", note.content));
         output.push_str("\n---\n\n");

@@ -3,6 +3,9 @@ import { invoke } from '@tauri-apps/api/tauri'
 import { listen } from '@tauri-apps/api/event'
 import type { Note, NoteFilters } from '../types'
 
+// Re-export Note type for components
+export type { Note } from '../types'
+
 interface NotesState {
   notes: Note[]
   archivedNotes: Note[]
@@ -209,6 +212,27 @@ export const useNotesStore = create<NotesState>((set, get) => ({
     }
 
     return filtered
+  },
+
+  getStats: () => {
+    const state = get()
+    const allNotes = [...state.notes, ...state.archivedNotes]
+    const now = Date.now()
+    const today = new Date().setHours(0, 0, 0, 0)
+    const weekAgo = now - 7 * 24 * 60 * 60 * 1000
+
+    const byType: Record<string, number> = {}
+    allNotes.forEach(n => {
+      byType[n.note_type] = (byType[n.note_type] || 0) + 1
+    })
+
+    return {
+      total: allNotes.length,
+      today: allNotes.filter(n => n.created_at * 1000 >= today).length,
+      week: allNotes.filter(n => n.created_at * 1000 >= weekAgo).length,
+      favorite: allNotes.filter(n => n.is_favorite).length,
+      byType
+    }
   }
 }))
 

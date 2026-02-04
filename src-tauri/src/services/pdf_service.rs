@@ -1,5 +1,4 @@
 use std::collections::HashMap;
-use std::io::Cursor;
 
 // Simple PDF generation using basic PDF structure
 pub struct PdfService;
@@ -18,9 +17,15 @@ impl PdfService {
         
         // PDF Header
         pdf_content.push_str("%PDF-1.4\n");
-        pdf_content.push_str("%\xe2\xe3\xcf\xd3\n");
+        // Binary comment to indicate binary content (using bytes)
+        pdf_content.push('%' as char);
+        pdf_content.push(0xe2 as char);
+        pdf_content.push(0xe3 as char);
+        pdf_content.push(0xcf as char);
+        pdf_content.push(0xd3 as char);
+        pdf_content.push('\n');
 
-        let mut objects: Vec<String> = Vec::new();
+        let _objects: Vec<String> = Vec::new();
         let mut object_offsets: Vec<usize> = Vec::new();
 
         // Object 1: Catalog
@@ -64,22 +69,25 @@ impl PdfService {
             // Title
             page_content.push_str(&format!("(CoolQuick Notes - Page {}) Tj\n", page_num + 1));
             page_content.push_str("0 -20 Td\n");
-            page_content.push_str("(Generated: ") Tj\n");
-            page_content.push_str(&format!("({}) Tj\n", chrono::Local::now().format("%Y-%m-%d %H:%M")));
+            page_content.push_str("(Generated: ");
+            page_content.push_str(&chrono::Local::now().format("%Y-%m-%d %H:%M").to_string());
+            page_content.push_str(") Tj\n");
             page_content.push_str("0 -30 Td\n");
 
             // Notes on this page (up to 10)
             let notes_on_page = notes.iter().skip(note_index).take(10);
             for note in notes_on_page {
+                let note_type_str = note.note_type.clone();
                 let type_name = type_names.get(note.note_type.as_str())
-                    .unwrap_or(&note.note_type.as_str());
+                    .map(|&s| s)
+                    .unwrap_or_else(|| note_type_str.as_str());
                 
                 page_content.push_str(&format!("(Type: {}) Tj\n", type_name));
                 page_content.push_str("0 -15 Td\n");
 
                 if include_metadata {
-                    let date_str = chrono::DateTime::from_timestamp_opt(note.created_at, 0)
-                        .map(|d| d.format("%Y-%m-%d %H:%M").to_string())
+                    let date_str = chrono::DateTime::from_timestamp_secs(note.created_at)
+                        .map(|d: chrono::DateTime<chrono::Utc>| d.format("%Y-%m-%d %H:%M").to_string())
                         .unwrap_or_default();
                     page_content.push_str(&format!("(Date: {}) Tj\n", date_str));
                     page_content.push_str("0 -15 Td\n");

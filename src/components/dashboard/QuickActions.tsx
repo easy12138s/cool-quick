@@ -3,10 +3,8 @@ import { motion } from 'framer-motion'
 import { 
   Download, 
   Upload, 
-  Trash2, 
   Database,
-  FileText,
-  FileSpreadsheet
+  FileText
 } from 'lucide-react'
 import { useNotesStore } from '../../stores/useNotesStore'
 

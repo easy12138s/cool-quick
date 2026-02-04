@@ -1,6 +1,5 @@
 use crate::config::AppConfig;
-use std::sync::Arc;
-use tauri::{command, State};
+use tauri::command;
 
 #[command]
 pub async fn config_get() -> Result<AppConfig, String> {

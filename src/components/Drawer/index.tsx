@@ -1,15 +1,14 @@
-import React, { useState, useRef, useEffect } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
+import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react'
+import { motion, AnimatePresence, PanInfo, useMotionValue, useTransform } from 'framer-motion'
 import {
-  Search, X, Star, Trash2, Archive, Download, Upload,
-  Filter, Clock, Copy, CheckCircle2, Sparkles, LayoutGrid, List,
-  ChevronDown, Pin, MoreHorizontal, RotateCcw, Settings
+  Search, X, Star, Trash2, Download, Filter, CheckCircle2,
+  LayoutGrid, List, ChevronDown, ClipboardList, ExternalLink,
+  MoreHorizontal, Clock, Hash
 } from 'lucide-react'
 import { invoke } from '@tauri-apps/api/tauri'
-import { format, formatDistanceToNow } from 'date-fns'
+import { formatDistanceToNow } from 'date-fns'
 import { zhCN } from 'date-fns/locale'
 import { useNotesStore } from '../../stores/useNotesStore'
-import { useConfigStore } from '../../stores/useConfigStore'
 import type { Note } from '../../types'
 
 interface DrawerProps {
@@ -40,394 +39,611 @@ const typeLabels: Record<string, string> = {
   text: '文本',
 }
 
-const typeColors: Record<string, { bg: string; text: string; border: string }> = {
+const typeColors: Record<string, { bg: string; text: string; border: string; gradient: string }> = {
   phone: {
     bg: 'bg-blue-50 dark:bg-blue-900/20',
-    text: 'text-blue-700 dark:text-blue-300',
-    border: 'border-blue-200 dark:border-blue-800'
+    text: 'text-blue-600 dark:text-blue-300',
+    border: 'border-blue-200 dark:border-blue-800',
+    gradient: 'from-blue-500 to-blue-600'
   },
   email: {
-    bg: 'bg-green-50 dark:bg-green-900/20',
-    text: 'text-green-700 dark:text-green-300',
-    border: 'border-green-200 dark:border-green-800'
+    bg: 'bg-emerald-50 dark:bg-emerald-900/20',
+    text: 'text-emerald-600 dark:text-emerald-300',
+    border: 'border-emerald-200 dark:border-emerald-800',
+    gradient: 'from-emerald-500 to-emerald-600'
   },
   url: {
-    bg: 'bg-purple-50 dark:bg-purple-900/20',
-    text: 'text-purple-700 dark:text-purple-300',
-    border: 'border-purple-200 dark:border-purple-800'
+    bg: 'bg-violet-50 dark:bg-violet-900/20',
+    text: 'text-violet-600 dark:text-violet-300',
+    border: 'border-violet-200 dark:border-violet-800',
+    gradient: 'from-violet-500 to-violet-600'
   },
   code: {
     bg: 'bg-amber-50 dark:bg-amber-900/20',
-    text: 'text-amber-700 dark:text-amber-300',
-    border: 'border-amber-200 dark:border-amber-800'
+    text: 'text-amber-600 dark:text-amber-300',
+    border: 'border-amber-200 dark:border-amber-800',
+    gradient: 'from-amber-500 to-amber-600'
   },
   password: {
     bg: 'bg-rose-50 dark:bg-rose-900/20',
-    text: 'text-rose-700 dark:text-rose-300',
-    border: 'border-rose-200 dark:border-rose-800'
+    text: 'text-rose-600 dark:text-rose-300',
+    border: 'border-rose-200 dark:border-rose-800',
+    gradient: 'from-rose-500 to-rose-600'
   },
   text: {
-    bg: 'bg-gray-50 dark:bg-gray-800/50',
-    text: 'text-gray-700 dark:text-gray-300',
-    border: 'border-gray-200 dark:border-gray-700'
+    bg: 'bg-slate-50 dark:bg-slate-800/50',
+    text: 'text-slate-600 dark:text-slate-300',
+    border: 'border-slate-200 dark:border-slate-700',
+    gradient: 'from-slate-500 to-slate-600'
   },
 }
 
-export const Drawer: React.FC<DrawerProps> = ({ notes, onCopy, onRefresh, config }) => {
+// 笔记项组件
+interface NoteItemProps {
+  note: Note
+  onCopy: (note: Note) => void
+  onDelete: (id: string) => void
+  onToggleFavorite: (id: string, isFavorite: boolean) => void
+  isCopied: boolean
+  viewMode: ViewMode
+  index: number
+}
+
+const NoteItem = React.memo<NoteItemProps>(({
+  note,
+  onCopy,
+  onDelete,
+  onToggleFavorite,
+  isCopied,
+  viewMode,
+  index
+}) => {
+  const [isHovered, setIsHovered] = useState(false)
+  const [isDeleting, setIsDeleting] = useState(false)
+  const [showActions, setShowActions] = useState(false)
+  const [showMenu, setShowMenu] = useState(false)
+  const colors = typeColors[note.note_type] || typeColors.text
+  const menuRef = useRef<HTMLDivElement>(null)
+  const x = useMotionValue(0)
+  const opacity = useTransform(x, [-100, 0], [0.5, 1])
+
+  // 点击外部关闭菜单
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setShowMenu(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
+
+  const handleDelete = useCallback((e: React.MouseEvent) => {
+    e.stopPropagation()
+    setIsDeleting(true)
+    setTimeout(() => onDelete(note.id), 250)
+  }, [note.id, onDelete])
+
+  const handleFavorite = useCallback((e: React.MouseEvent) => {
+    e.stopPropagation()
+    onToggleFavorite(note.id, note.is_favorite)
+  }, [note.id, note.is_favorite, onToggleFavorite])
+
+  const handleDragEnd = useCallback((_: any, info: PanInfo) => {
+    const threshold = 80
+    if (info.offset.x < -threshold) {
+      setShowActions(true)
+    } else if (info.offset.x > threshold / 2) {
+      setShowActions(false)
+    }
+  }, [])
+
+  // 网格视图
+  if (viewMode === 'grid') {
+    return (
+      <motion.div
+        layout
+        initial={{ opacity: 0, scale: 0.9, y: 10 }}
+        animate={{ 
+          opacity: isDeleting ? 0 : 1, 
+          scale: isDeleting ? 0.8 : 1,
+          y: isDeleting ? -20 : 0
+        }}
+        exit={{ opacity: 0, scale: 0.8 }}
+        transition={{ duration: 0.25, delay: index * 0.03 }}
+        className="relative group"
+        onMouseEnter={() => setIsHovered(true)}
+        onMouseLeave={() => setIsHovered(false)}
+      >
+        <motion.div
+          className={`p-4 rounded-2xl cursor-pointer border bg-white dark:bg-slate-900 ${colors.border} transition-shadow duration-200 ${isHovered ? 'shadow-lg' : 'shadow-sm'}`}
+          onClick={() => onCopy(note)}
+          whileTap={{ scale: 0.98 }}
+          style={{ opacity }}
+        >
+          {/* 头部 */}
+          <div className="flex items-start justify-between mb-3">
+            <div className={`w-10 h-10 rounded-xl ${colors.bg} ${colors.text} flex items-center justify-center text-lg border ${colors.border} shadow-sm`}>
+              {typeIcons[note.note_type]}
+            </div>
+            
+            {/* 操作按钮 */}
+            <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+              <motion.button
+                onClick={handleFavorite}
+                className={`p-2 rounded-lg transition-colors ${note.is_favorite ? 'text-amber-500 bg-amber-50 dark:bg-amber-900/20' : 'text-slate-300 hover:text-amber-500 hover:bg-amber-50'}`}
+                whileHover={{ scale: 1.1 }}
+                whileTap={{ scale: 0.9 }}
+              >
+                <Star size={16} className={note.is_favorite ? 'fill-amber-500' : ''} />
+              </motion.button>
+              <div className="relative" ref={menuRef}>
+                <motion.button
+                  onClick={(e) => { e.stopPropagation(); setShowMenu(!showMenu) }}
+                  className="p-2 text-slate-300 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"
+                  whileHover={{ scale: 1.1 }}
+                  whileTap={{ scale: 0.9 }}
+                >
+                  <MoreHorizontal size={16} />
+                </motion.button>
+                
+                {/* 下拉菜单 */}
+                <AnimatePresence>
+                  {showMenu && (
+                    <motion.div
+                      initial={{ opacity: 0, scale: 0.95, y: 5 }}
+                      animate={{ opacity: 1, scale: 1, y: 0 }}
+                      exit={{ opacity: 0, scale: 0.95, y: 5 }}
+                      className="absolute right-0 top-full mt-1 bg-white dark:bg-slate-800 rounded-lg shadow-xl border border-slate-100 dark:border-slate-700 py-1 min-w-[120px] z-10"
+                    >
+                      <button
+                        onClick={handleDelete}
+                        className="w-full px-3 py-2 text-left text-sm text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-900/20 flex items-center gap-2"
+                      >
+                        <Trash2 size={14} />
+                        删除
+                      </button>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
+            </div>
+          </div>
+
+          {/* 内容 */}
+          <p className="text-sm text-slate-800 dark:text-slate-200 line-clamp-3 mb-3 font-mono leading-relaxed">
+            {note.content}
+          </p>
+
+          {/* 底部信息 */}
+          <div className="flex items-center justify-between">
+            <span className={`text-xs px-2.5 py-1 rounded-full border font-medium ${colors.bg} ${colors.text} ${colors.border}`}>
+              {typeLabels[note.note_type] || note.note_type}
+            </span>
+            <span className="text-xs text-slate-400">
+              {formatDistanceToNow(new Date(note.created_at * 1000), { addSuffix: true, locale: zhCN })}
+            </span>
+          </div>
+        </motion.div>
+
+        {/* 复制成功遮罩 */}
+        <AnimatePresence>
+          {isCopied && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="absolute inset-0 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm rounded-2xl"
+            >
+              <motion.div
+                initial={{ scale: 0.8, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                exit={{ scale: 0.8, opacity: 0 }}
+                className="bg-emerald-500 text-white px-4 py-2 rounded-xl flex items-center gap-2 shadow-lg"
+              >
+                <CheckCircle2 size={18} />
+                <span className="text-sm font-medium">已复制</span>
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </motion.div>
+    )
+  }
+
+  // 列表视图 - 支持滑动删除
+  return (
+    <motion.div
+      layout
+      initial={{ opacity: 0, x: -20 }}
+      animate={{ 
+        opacity: isDeleting ? 0 : 1, 
+        x: isDeleting ? 100 : 0,
+        height: isDeleting ? 0 : 'auto',
+        marginBottom: isDeleting ? 0 : 8
+      }}
+      exit={{ opacity: 0, x: -100 }}
+      transition={{ duration: 0.25, ease: [0.4, 0, 0.2, 1], delay: index * 0.02 }}
+      className="relative"
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
+    >
+      {/* 删除背景层 */}
+      <motion.div
+        className="absolute inset-0 bg-gradient-to-r from-rose-500 to-rose-600 flex items-center justify-end pr-6 rounded-2xl cursor-pointer shadow-inner"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: showActions ? 1 : 0 }}
+        onClick={handleDelete}
+      >
+        <motion.div 
+          className="flex items-center gap-2 text-white"
+          initial={{ x: 20, opacity: 0 }}
+          animate={{ x: showActions ? 0 : 20, opacity: showActions ? 1 : 0 }}
+          transition={{ duration: 0.2 }}
+        >
+          <Trash2 size={20} />
+          <span className="text-sm font-medium">删除</span>
+        </motion.div>
+      </motion.div>
+
+      {/* 内容层 */}
+      <motion.div
+        drag="x"
+        dragConstraints={{ left: -120, right: 0 }}
+        dragElastic={0.1}
+        onDragEnd={handleDragEnd}
+        style={{ x }}
+        animate={{ x: showActions ? -100 : 0 }}
+        transition={{ type: 'spring', stiffness: 400, damping: 35 }}
+        className={`relative p-4 rounded-2xl cursor-pointer border bg-white dark:bg-slate-900 ${colors.border} shadow-sm transition-shadow duration-200 ${isHovered ? 'shadow-md' : ''}`}
+        onClick={() => !showActions && onCopy(note)}
+        whileTap={{ scale: 0.995 }}
+      >
+        <div className="flex items-start gap-3">
+          {/* 图标 */}
+          <div className={`flex-shrink-0 w-11 h-11 rounded-xl ${colors.bg} ${colors.text} flex items-center justify-center text-lg border ${colors.border} shadow-sm`}>
+            {typeIcons[note.note_type]}
+          </div>
+
+          {/* 内容区 */}
+          <div className="flex-1 min-w-0">
+            <div className="flex items-start justify-between gap-2">
+              <p className="text-sm text-slate-800 dark:text-slate-200 truncate font-mono leading-relaxed">
+                {note.content.length > 70 ? note.content.slice(0, 70) + '...' : note.content}
+              </p>
+
+              <AnimatePresence>
+                {isCopied && (
+                  <motion.div
+                    initial={{ scale: 0, opacity: 0 }}
+                    animate={{ scale: 1, opacity: 1 }}
+                    exit={{ scale: 0, opacity: 0 }}
+                    className="flex-shrink-0 text-emerald-500"
+                  >
+                    <CheckCircle2 size={16} />
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+
+            {/* 元信息 */}
+            <div className="flex items-center gap-3 mt-2">
+              <span className={`text-xs px-2 py-0.5 rounded-full border font-medium ${colors.bg} ${colors.text} ${colors.border}`}>
+                {typeLabels[note.note_type] || note.note_type}
+              </span>
+              <span className="text-xs text-slate-400 flex items-center gap-1">
+                <Clock size={10} />
+                {formatDistanceToNow(new Date(note.created_at * 1000), { addSuffix: true, locale: zhCN })}
+              </span>
+              {note.is_favorite && (
+                <Star size={12} className="text-amber-500 fill-amber-500" />
+              )}
+              {note.use_count > 0 && (
+                <span className="text-xs text-slate-400 flex items-center gap-1">
+                  <Hash size={10} />
+                  {note.use_count}
+                </span>
+              )}
+            </div>
+          </div>
+
+          {/* 悬停操作 */}
+          <motion.div
+            className="flex items-center gap-1"
+            initial={{ opacity: 0, x: 10 }}
+            animate={{ opacity: isHovered ? 1 : 0, x: isHovered ? 0 : 10 }}
+            transition={{ duration: 0.15 }}
+          >
+            <motion.button
+              onClick={handleFavorite}
+              className={`p-2 rounded-lg transition-colors ${note.is_favorite ? 'text-amber-500' : 'text-slate-300 hover:text-amber-500'}`}
+              whileHover={{ scale: 1.1 }}
+              whileTap={{ scale: 0.9 }}
+            >
+              <Star size={16} className={note.is_favorite ? 'fill-amber-500' : ''} />
+            </motion.button>
+          </motion.div>
+        </div>
+
+        {/* 滑动提示 */}
+        <motion.div
+          className="absolute right-0 top-0 bottom-0 w-1.5 bg-gradient-to-b from-transparent via-slate-300 to-transparent rounded-r-2xl"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: showActions ? 0 : (isHovered ? 0.4 : 0) }}
+        />
+      </motion.div>
+    </motion.div>
+  )
+})
+
+NoteItem.displayName = 'NoteItem'
+
+export const Drawer: React.FC<DrawerProps> = ({ notes, onRefresh }) => {
   const [searchQuery, setSearchQuery] = useState('')
   const [filteredNotes, setFilteredNotes] = useState<Note[]>(notes)
   const [selectedType, setSelectedType] = useState<string | null>(null)
   const [viewMode, setViewMode] = useState<ViewMode>('list')
-  const [sortMode, setSortMode] = useState<SortMode>('time')
-  const [selectedNote, setSelectedNote] = useState<string | null>(null)
+  const [sortMode] = useState<SortMode>('time')
   const [copiedId, setCopiedId] = useState<string | null>(null)
   const [showFilters, setShowFilters] = useState(false)
-  const [contextMenu, setContextMenu] = useState<{ x: number; y: number; note: Note } | null>(null)
-  const [isMouseInside, setIsMouseInside] = useState(true)
+  const [isRefreshing, setIsRefreshing] = useState(false)
   const drawerRef = useRef<HTMLDivElement>(null)
-  const hideTimerRef = useRef<NodeJS.Timeout | null>(null)
+  const hideTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const searchInputRef = useRef<HTMLInputElement>(null)
 
-  const { archiveNote, unarchiveNote, toggleFavorite, deleteNote, importNotes, exportNotes } = useNotesStore()
+  const { toggleFavorite, deleteNote, exportNotes } = useNotesStore()
 
-  // Filter and sort notes
+  // 搜索过滤 - 带防抖
   useEffect(() => {
-    let filtered = notes
+    const timer = setTimeout(() => {
+      let filtered = [...notes]
 
-    if (searchQuery.trim()) {
-      filtered = filtered.filter(note =>
-        note.content.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        note.note_type.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        note.tags.some(tag => tag.toLowerCase().includes(searchQuery.toLowerCase()))
-      )
-    }
-
-    if (selectedType) {
-      filtered = filtered.filter(note => note.note_type === selectedType)
-    }
-
-    filtered = [...filtered].sort((a, b) => {
-      switch (sortMode) {
-        case 'favorite':
-          if (a.is_favorite !== b.is_favorite) {
-            return a.is_favorite ? -1 : 1
-          }
-          return b.created_at - a.created_at
-        case 'type':
-          if (a.note_type !== b.note_type) {
-            return a.note_type.localeCompare(b.note_type)
-          }
-          return b.created_at - a.created_at
-        case 'time':
-        default:
-          return b.created_at - a.created_at
+      if (searchQuery.trim()) {
+        const query = searchQuery.toLowerCase()
+        filtered = filtered.filter(note =>
+          note.content.toLowerCase().includes(query) ||
+          note.note_type.toLowerCase().includes(query) ||
+          note.tags.some(tag => tag.toLowerCase().includes(query))
+        )
       }
-    })
 
-    setFilteredNotes(filtered)
+      if (selectedType) {
+        filtered = filtered.filter(note => note.note_type === selectedType)
+      }
+
+      // 排序
+      filtered.sort((a, b) => {
+        switch (sortMode) {
+          case 'time':
+            return b.created_at - a.created_at
+          case 'favorite':
+            if (a.is_favorite === b.is_favorite) return b.created_at - a.created_at
+            return a.is_favorite ? -1 : 1
+          case 'type':
+            if (a.note_type === b.note_type) return b.created_at - a.created_at
+            return a.note_type.localeCompare(b.note_type)
+          default:
+            return 0
+        }
+      })
+
+      setFilteredNotes(filtered)
+    }, 150)
+
+    return () => clearTimeout(timer)
   }, [searchQuery, notes, selectedType, sortMode])
 
-  // Auto-hide logic
+  // 自动隐藏
   useEffect(() => {
-    const handleMouseMove = (e: MouseEvent) => {
-      if (drawerRef.current) {
-        const rect = drawerRef.current.getBoundingClientRect()
-        const isInside =
-          e.clientX >= rect.left &&
-          e.clientX <= rect.right &&
-          e.clientY >= rect.top &&
-          e.clientY <= rect.bottom
-
-        if (isInside !== isMouseInside) {
-          setIsMouseInside(isInside)
-
-          if (!isInside) {
-            // Mouse left - start timer to hide
-            hideTimerRef.current = setTimeout(() => {
-              invoke('window_hide_drawer')
-            }, 500)
-          } else {
-            // Mouse entered - cancel hide timer
-            if (hideTimerRef.current) {
-              clearTimeout(hideTimerRef.current)
-              hideTimerRef.current = null
-            }
-          }
-        }
-      }
+    const handleMouseLeave = () => {
+      hideTimerRef.current = setTimeout(() => {
+        invoke('window_hide_drawer')
+      }, 600)
     }
 
-    window.addEventListener('mousemove', handleMouseMove)
-    return () => {
-      window.removeEventListener('mousemove', handleMouseMove)
+    const handleMouseEnter = () => {
       if (hideTimerRef.current) {
         clearTimeout(hideTimerRef.current)
+        hideTimerRef.current = null
       }
     }
-  }, [isMouseInside])
 
-  // Handle keyboard shortcuts
-  useEffect(() => {
+    const drawer = drawerRef.current
+    if (drawer) {
+      drawer.addEventListener('mouseleave', handleMouseLeave)
+      drawer.addEventListener('mouseenter', handleMouseEnter)
+    }
+
+    // 键盘快捷键
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
-        setContextMenu(null)
-        setSelectedNote(null)
         invoke('window_hide_drawer')
+      }
+      if (e.key === '/' && !e.ctrlKey && !e.metaKey && !e.altKey) {
+        e.preventDefault()
+        searchInputRef.current?.focus()
+      }
+      if (e.key === 'v' && (e.ctrlKey || e.metaKey)) {
+        e.preventDefault()
+        setViewMode(prev => prev === 'list' ? 'grid' : 'list')
       }
     }
 
     window.addEventListener('keydown', handleKeyDown)
-    return () => window.removeEventListener('keydown', handleKeyDown)
+
+    return () => {
+      if (drawer) {
+        drawer.removeEventListener('mouseleave', handleMouseLeave)
+        drawer.removeEventListener('mouseenter', handleMouseEnter)
+      }
+      window.removeEventListener('keydown', handleKeyDown)
+      if (hideTimerRef.current) clearTimeout(hideTimerRef.current)
+    }
   }, [])
 
-  const handleCopy = async (note: Note) => {
-    onCopy(note.content)
+  const handleCopy = useCallback(async (note: Note) => {
+    await invoke('clipboard_set_text', { content: note.content })
     setCopiedId(note.id)
-    setTimeout(() => setCopiedId(null), 2000)
+    setTimeout(() => setCopiedId(null), 1500)
 
     await invoke('notes_update', {
       id: note.id,
       useCount: note.use_count + 1
     }).catch(() => { })
-  }
 
-  const uniqueTypes = Array.from(new Set(notes.map(n => n.note_type)))
+    setTimeout(() => invoke('window_hide_drawer'), 400)
+  }, [])
+
+  const handleRefresh = useCallback(async () => {
+    setIsRefreshing(true)
+    await onRefresh()
+    setTimeout(() => setIsRefreshing(false), 500)
+  }, [onRefresh])
+
+  const uniqueTypes = useMemo(() => 
+    Array.from(new Set(notes.map(n => n.note_type))),
+    [notes]
+  )
 
   return (
-    <motion.div
-      ref={drawerRef}
-      className="w-[380px] h-[550px] bg-white/95 dark:bg-gray-900/95 backdrop-blur-xl rounded-2xl shadow-2xl overflow-hidden flex flex-col border border-gray-200/50 dark:border-gray-700/50"
-      initial={{ opacity: 0, scale: 0.9, y: 20 }}
-      animate={{ opacity: 1, scale: 1, y: 0 }}
-      exit={{ opacity: 0, scale: 0.9, y: 20 }}
-      transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-    >
-      {/* Header */}
-      <div className="p-4 border-b border-gray-200/50 dark:border-gray-700/50 bg-gradient-to-r from-gray-50/50 to-transparent dark:from-gray-800/50">
-        <div className="flex items-center gap-2 mb-3">
-          <div className="relative flex-1 group">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-primary-500 transition-colors" size={16} />
-            <input
-              type="text"
-              placeholder="搜索笔记..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-10 pr-9 py-2.5 bg-gray-100/80 dark:bg-gray-800/80 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary-500/50 focus:bg-white dark:focus:bg-gray-800 transition-all border border-transparent focus:border-primary-500/30"
-            />
-            {searchQuery && (
-              <button
-                onClick={() => setSearchQuery('')}
-                className="absolute right-2 top-1/2 -translate-y-1/2 p-1 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-full text-gray-400 hover:text-gray-600 transition-colors"
-              >
-                <X size={14} />
-              </button>
-            )}
-          </div>
-
-          <div className="flex bg-gray-100 dark:bg-gray-800 rounded-lg p-1">
-            <button
-              onClick={() => setViewMode('list')}
-              className={`p-1.5 rounded-md transition-all ${viewMode === 'list' ? 'bg-white dark:bg-gray-700 shadow-sm text-primary-600' : 'text-gray-500 hover:text-gray-700'}`}
-            >
-              <List size={16} />
-            </button>
-            <button
-              onClick={() => setViewMode('grid')}
-              className={`p-1.5 rounded-md transition-all ${viewMode === 'grid' ? 'bg-white dark:bg-gray-700 shadow-sm text-primary-600' : 'text-gray-500 hover:text-gray-700'}`}
-            >
-              <LayoutGrid size={16} />
-            </button>
-          </div>
-        </div>
-
-        {/* Filter bar */}
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => setShowFilters(!showFilters)}
-            className={`flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-lg transition-all ${showFilters ? 'bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300' : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'}`}
-          >
-            <Filter size={12} />
-            筛选
-            <ChevronDown size={12} className={`transition-transform ${showFilters ? 'rotate-180' : ''}`} />
-          </button>
-
-          <div className="h-4 w-px bg-gray-300 dark:bg-gray-600" />
-
-          <div className="flex gap-1.5 overflow-x-auto scrollbar-hide flex-1">
-            <button
-              onClick={() => setSelectedType(null)}
-              className={`px-2.5 py-1 text-xs rounded-full whitespace-nowrap transition-all ${selectedType === null ? 'bg-primary-500 text-white shadow-sm' : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'}`}
-            >
-              全部
-            </button>
-            {uniqueTypes.map(type => (
-              <button
-                key={type}
-                onClick={() => setSelectedType(selectedType === type ? null : type)}
-                className={`px-2.5 py-1 text-xs rounded-full whitespace-nowrap transition-all flex items-center gap-1 ${selectedType === type ? 'bg-primary-500 text-white shadow-sm' : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'}`}
-              >
-                <span>{typeIcons[type]}</span>
-                <span className="capitalize">{typeLabels[type] || type}</span>
-              </button>
-            ))}
-          </div>
-        </div>
-      </div>
-
-      {/* Notes List */}
-      <div className="flex-1 overflow-y-auto p-3 space-y-2 scrollbar-thin">
-        <AnimatePresence mode="popLayout">
-          {filteredNotes.map((note, index) => {
-            const colors = typeColors[note.note_type] || typeColors.text
-            const isCopied = copiedId === note.id
-
-            return (
-              <motion.div
-                key={note.id}
-                layout
-                initial={{ opacity: 0, y: 20, scale: 0.95 }}
-                animate={{ opacity: 1, y: 0, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.9, x: -50 }}
-                transition={{
-                  delay: index * 0.03,
-                  type: 'spring',
-                  damping: 25,
-                  stiffness: 300
-                }}
-                className={`group relative p-3 rounded-xl cursor-pointer transition-all border ${colors.bg} ${colors.border} hover:shadow-md ${selectedNote === note.id ? 'ring-2 ring-primary-500/50' : ''} ${viewMode === 'grid' ? 'inline-block w-[calc(50%-4px)]' : 'block'}`}
-                onClick={() => handleCopy(note)}
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-              >
-                <div className="flex items-start gap-3">
-                  <motion.div
-                    className={`flex-shrink-0 w-10 h-10 rounded-lg ${colors.bg} ${colors.text} flex items-center justify-center text-lg border ${colors.border}`}
-                    whileHover={{ rotate: [0, -10, 10, 0] }}
-                    transition={{ duration: 0.5 }}
-                  >
-                    {typeIcons[note.note_type]}
-                  </motion.div>
-
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-start justify-between gap-2">
-                      <p className={`text-sm font-medium text-gray-900 dark:text-gray-100 ${viewMode === 'grid' ? 'line-clamp-2' : 'truncate'}`}>
-                        {note.content.length > (viewMode === 'grid' ? 60 : 100)
-                          ? note.content.slice(0, viewMode === 'grid' ? 60 : 100) + '...'
-                          : note.content}
-                      </p>
-
-                      <AnimatePresence>
-                        {isCopied && (
-                          <motion.div
-                            initial={{ scale: 0, opacity: 0 }}
-                            animate={{ scale: 1, opacity: 1 }}
-                            exit={{ scale: 0, opacity: 0 }}
-                            className="flex-shrink-0 text-green-500"
-                          >
-                            <CheckCircle2 size={16} />
-                          </motion.div>
-                        )}
-                      </AnimatePresence>
-                    </div>
-
-                    <div className="flex items-center gap-2 mt-2">
-                      <span className={`text-xs px-2 py-0.5 rounded-md border ${colors.bg} ${colors.text} ${colors.border} font-medium`}>
-                        {typeLabels[note.note_type] || note.note_type}
-                      </span>
-                      <span className="text-xs text-gray-400 flex items-center gap-1">
-                        <Clock size={10} />
-                        {formatDistanceToNow(new Date(note.created_at * 1000), { addSuffix: true, locale: zhCN })}
-                      </span>
-                      {note.is_favorite && (
-                        <motion.span
-                          initial={{ scale: 0 }}
-                          animate={{ scale: 1 }}
-                          className="text-yellow-500"
-                        >
-                          <Star size={12} className="fill-yellow-500" />
-                        </motion.span>
-                      )}
-                    </div>
-                  </div>
-                </div>
-
-                {/* Hover actions */}
-                <motion.div
-                  className="absolute right-2 top-2 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity"
-                  initial={false}
+    <div className="w-full h-full flex items-center justify-center p-3" style={{ background: 'transparent' }}>
+      <motion.div
+        ref={drawerRef}
+        className="w-full max-w-[400px] h-[540px] bg-white/98 dark:bg-slate-900/98 backdrop-blur-xl rounded-3xl shadow-2xl overflow-hidden flex flex-col border border-slate-200/50 dark:border-slate-700/50"
+        initial={{ opacity: 0, scale: 0.9, x: 60, filter: 'blur(10px)' }}
+        animate={{ opacity: 1, scale: 1, x: 0, filter: 'blur(0px)' }}
+        exit={{ opacity: 0, scale: 0.9, x: 60, filter: 'blur(10px)' }}
+        transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+      >
+        {/* 头部 */}
+        <div className="p-4 border-b border-slate-100 dark:border-slate-800 flex-shrink-0 bg-gradient-to-b from-white to-slate-50/50 dark:from-slate-900 dark:to-slate-900/50">
+          {/* 搜索栏 */}
+          <div className="flex items-center gap-3 mb-3">
+            <div className="relative flex-1 group">
+              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-primary transition-colors" size={16} />
+              <input
+                ref={searchInputRef}
+                type="text"
+                placeholder="搜索笔记... (/)"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full pl-10 pr-9 py-2.5 bg-slate-100 dark:bg-slate-800 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 focus:bg-white dark:focus:bg-slate-800 border-0 transition-all placeholder:text-slate-400"
+              />
+              {searchQuery && (
+                <button
+                  onClick={() => setSearchQuery('')}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-lg transition-colors"
                 >
-                  <motion.button
-                    whileHover={{ scale: 1.1 }}
-                    whileTap={{ scale: 0.9 }}
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      toggleFavorite(note.id, note.is_favorite)
-                    }}
-                    className={`p-1.5 rounded-lg transition-colors ${note.is_favorite ? 'bg-yellow-100 text-yellow-600 dark:bg-yellow-900/30' : 'bg-white/80 dark:bg-gray-800/80 text-gray-400 hover:text-yellow-500'}`}
-                  >
-                    <Star size={14} className={note.is_favorite ? 'fill-yellow-500' : ''} />
-                  </motion.button>
-                  <motion.button
-                    whileHover={{ scale: 1.1 }}
-                    whileTap={{ scale: 0.9 }}
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      archiveNote(note.id)
-                    }}
-                    className="p-1.5 bg-white/80 dark:bg-gray-800/80 rounded-lg text-gray-400 hover:text-blue-500 transition-colors"
-                  >
-                    <Archive size={14} />
-                  </motion.button>
-                  <motion.button
-                    whileHover={{ scale: 1.1 }}
-                    whileTap={{ scale: 0.9 }}
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      deleteNote(note.id)
-                    }}
-                    className="p-1.5 bg-white/80 dark:bg-gray-800/80 rounded-lg text-gray-400 hover:text-red-500 transition-colors"
-                  >
-                    <Trash2 size={14} />
-                  </motion.button>
-                </motion.div>
-              </motion.div>
-            )
-          })}
-        </AnimatePresence>
+                  <X size={14} />
+                </button>
+              )}
+            </div>
 
-        {/* Empty state */}
-        {filteredNotes.length === 0 && (
-          <motion.div
-            className="flex flex-col items-center justify-center h-48 text-gray-400"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-          >
-            <ClipboardList size={64} className="mb-4 opacity-30" />
-            <p className="text-base font-medium text-gray-500 dark:text-gray-400 mb-1">
-              {searchQuery ? '没有找到匹配的笔记' : '暂无笔记'}
-            </p>
-            <p className="text-sm text-gray-400">
-              {searchQuery ? '试试其他关键词' : '复制内容时会自动保存到这里'}
-            </p>
-          </motion.div>
-        )}
-      </div>
+            {/* 视图切换 */}
+            <div className="flex bg-slate-100 dark:bg-slate-800 rounded-xl p-1 shadow-inner">
+              <button
+                onClick={() => setViewMode('list')}
+                className={`p-2 rounded-lg transition-all duration-200 ${viewMode === 'list' ? 'bg-white dark:bg-slate-700 shadow-sm text-primary' : 'text-slate-400 hover:text-slate-600'}`}
+                title="列表视图 (Ctrl+V)"
+              >
+                <List size={16} />
+              </button>
+              <button
+                onClick={() => setViewMode('grid')}
+                className={`p-2 rounded-lg transition-all duration-200 ${viewMode === 'grid' ? 'bg-white dark:bg-slate-700 shadow-sm text-primary' : 'text-slate-400 hover:text-slate-600'}`}
+                title="网格视图 (Ctrl+V)"
+              >
+                <LayoutGrid size={16} />
+              </button>
+            </div>
+          </div>
 
-      {/* Footer */}
-      <div className="p-3 border-t border-gray-200/50 dark:border-gray-700/50 bg-gradient-to-r from-transparent to-gray-50/50 dark:to-gray-800/50 flex items-center justify-between">
-        <div className="flex items-center gap-2 text-xs text-gray-500">
-          <span className="font-medium">{filteredNotes.length}</span>
-          <span>条笔记</span>
-          {selectedType && (
-            <>
-              <span className="text-gray-300">·</span>
-              <span className="text-primary-600 dark:text-primary-400">
-                {typeLabels[selectedType]}
-              </span>
-            </>
+          {/* 筛选栏 */}
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setShowFilters(!showFilters)}
+              className={`flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-lg transition-all duration-200 ${showFilters ? 'bg-primary/10 text-primary shadow-sm' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}
+            >
+              <Filter size={12} />
+              筛选
+              <ChevronDown size={12} className={`transition-transform duration-200 ${showFilters ? 'rotate-180' : ''}`} />
+            </button>
+
+            <div className="flex gap-1.5 overflow-x-auto scrollbar-hide flex-1">
+              <button
+                onClick={() => setSelectedType(null)}
+                className={`px-3 py-1.5 text-xs rounded-full whitespace-nowrap transition-all duration-200 ${selectedType === null ? 'bg-primary text-white shadow-md shadow-primary/25' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}
+              >
+                全部
+              </button>
+              {uniqueTypes.slice(0, 4).map(type => (
+                <button
+                  key={type}
+                  onClick={() => setSelectedType(selectedType === type ? null : type)}
+                  className={`px-3 py-1.5 text-xs rounded-full whitespace-nowrap transition-all duration-200 flex items-center gap-1.5 ${selectedType === type ? 'bg-primary text-white shadow-md shadow-primary/25' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}
+                >
+                  <span>{typeIcons[type]}</span>
+                  <span>{typeLabels[type] || type}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* 笔记列表 */}
+        <div className={`flex-1 overflow-y-auto p-3 scrollbar-thin ${viewMode === 'grid' ? 'grid grid-cols-2 gap-3' : 'space-y-2'}`}>
+          <AnimatePresence mode="popLayout">
+            {filteredNotes.map((note, index) => (
+              <NoteItem
+                key={note.id}
+                note={note}
+                onCopy={handleCopy}
+                onDelete={deleteNote}
+                onToggleFavorite={toggleFavorite}
+                isCopied={copiedId === note.id}
+                viewMode={viewMode}
+                index={index}
+              />
+            ))}
+          </AnimatePresence>
+
+          {/* 空状态 */}
+          {filteredNotes.length === 0 && (
+            <motion.div
+              className="flex flex-col items-center justify-center h-56 text-slate-400 col-span-full"
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ duration: 0.3 }}
+            >
+              <div className="w-20 h-20 rounded-2xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center mb-4">
+                <ClipboardList size={32} className="text-slate-300" />
+              </div>
+              <p className="text-slate-500 font-medium text-base">
+                {searchQuery ? '没有找到匹配的笔记' : '暂无笔记'}
+              </p>
+              <p className="text-sm mt-1 text-slate-400">复制内容时会自动保存到这里</p>
+            </motion.div>
           )}
         </div>
 
-        <div className="flex items-center gap-2">
+        {/* 底部 */}
+        <div className="p-3 border-t border-slate-100 dark:border-slate-800 bg-slate-50/80 dark:bg-slate-800/50 flex items-center justify-between flex-shrink-0 backdrop-blur-sm">
+          <div className="flex items-center gap-3">
+            <span className="text-xs text-slate-500">
+              <span className="font-semibold text-slate-700">{filteredNotes.length}</span>
+              <span className="text-slate-400"> / {notes.length}</span>
+            </span>
+            <motion.button
+              onClick={handleRefresh}
+              animate={{ rotate: isRefreshing ? 360 : 0 }}
+              transition={{ duration: 0.6, ease: 'linear' }}
+              className="p-1.5 text-slate-400 hover:text-primary hover:bg-primary/10 rounded-lg transition-colors"
+              title="刷新"
+            >
+              <ExternalLink size={14} />
+            </motion.button>
+          </div>
+
           <button
             onClick={async () => {
               const data = await exportNotes()
@@ -441,16 +657,13 @@ export const Drawer: React.FC<DrawerProps> = ({ notes, onCopy, onRefresh, config
                 URL.revokeObjectURL(url)
               }
             }}
-            className="flex items-center gap-1.5 px-3 py-1.5 text-xs bg-primary-50 dark:bg-primary-900/20 text-primary-700 dark:text-primary-300 rounded-lg hover:bg-primary-100 dark:hover:bg-primary-900/30 transition-colors font-medium"
+            className="flex items-center gap-1.5 px-3 py-1.5 text-xs bg-primary/10 text-primary rounded-lg hover:bg-primary/20 transition-colors font-medium"
           >
             <Download size={14} />
             导出
           </button>
         </div>
-      </div>
-    </motion.div>
+      </motion.div>
+    </div>
   )
 }
-
-// Fix ClipboardList import
-import { ClipboardList } from 'lucide-react'

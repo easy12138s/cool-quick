@@ -1,14 +1,14 @@
-import React, { useState, useRef, useEffect, useCallback } from 'react'
-import { motion, AnimatePresence, Reorder } from 'framer-motion'
+import React, { useState, useRef, useEffect } from 'react'
+import { motion, AnimatePresence } from 'framer-motion'
 import { 
-  Search, X, Star, Trash2, Archive, Download, Settings, 
+  Search, X, Star, Trash2, Archive, Download, 
   Filter, Clock, Copy, CheckCircle2, Sparkles, LayoutGrid, List,
-  ChevronDown, Pin, MoreHorizontal
+  ChevronDown, Clipboard
 } from 'lucide-react'
 import { invoke } from '@tauri-apps/api/tauri'
 import { format, formatDistanceToNow } from 'date-fns'
 import { zhCN } from 'date-fns/locale'
-import { Note, AppConfig } from '../App'
+import type { Note, AppConfig } from '../types'
 
 interface DrawerProps {
   notes: Note[]
@@ -71,7 +71,7 @@ const typeColors: Record<string, { bg: string; text: string; border: string }> =
   },
 }
 
-const Drawer: React.FC<DrawerProps> = ({ notes, onCopy, onRefresh, config }) => {
+const Drawer: React.FC<DrawerProps> = ({ notes, onCopy, onRefresh }) => {
   const [searchQuery, setSearchQuery] = useState('')
   const [filteredNotes, setFilteredNotes] = useState<Note[]>(notes)
   const [selectedType, setSelectedType] = useState<string | null>(null)
@@ -93,7 +93,7 @@ const Drawer: React.FC<DrawerProps> = ({ notes, onCopy, onRefresh, config }) => 
       filtered = filtered.filter(note =>
         note.content.toLowerCase().includes(searchQuery.toLowerCase()) ||
         note.note_type.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        note.tags.some(tag => tag.toLowerCase().includes(searchQuery.toLowerCase()))
+        note.tags.some((tag: string) => tag.toLowerCase().includes(searchQuery.toLowerCase()))
       )
     }
 
@@ -188,7 +188,7 @@ const Drawer: React.FC<DrawerProps> = ({ notes, onCopy, onRefresh, config }) => 
     }
   }
 
-  const handleArchive = async (noteId: string, e?: React.MouseEvent) => {
+  const handleArchive = async (_noteId: string, e?: React.MouseEvent) => {
     e?.stopPropagation()
     try {
       await invoke('archive_notes', { byDateDays: 0, byType: null })

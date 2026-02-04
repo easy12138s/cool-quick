@@ -1,4 +1,4 @@
-use tauri::{AppHandle, Manager, WindowBuilder, WindowUrl, PhysicalPosition, Size, PhysicalSize};
+use tauri::{AppHandle, Manager, PhysicalPosition, PhysicalSize};
 
 pub fn toggle_floating_window(app: &AppHandle) {
     if let Some(window) = app.get_window("floating") {

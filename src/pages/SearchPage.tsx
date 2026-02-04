@@ -5,7 +5,7 @@ import { useNotesStore } from '../stores/useNotesStore'
 
 export const SearchPage: React.FC = () => {
   const [query, setQuery] = useState('')
-  const { notes, getFilteredNotes } = useNotesStore()
+  const { getFilteredNotes } = useNotesStore()
   
   const filtered = query ? getFilteredNotes({ search: query }) : []
 

@@ -1,8 +1,8 @@
-import React, { useState, useEffect, useCallback } from 'react'
+import React, { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Clipboard, Sparkles, Pin, Settings } from 'lucide-react'
 import { invoke } from '@tauri-apps/api/tauri'
-import { AppConfig } from '../App'
+import type { AppConfig } from '../types'
 
 interface FloatingWindowProps {
   onMouseEnter: () => void

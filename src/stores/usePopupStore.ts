@@ -1,4 +1,5 @@
 import { create } from 'zustand'
+import { invoke } from '@tauri-apps/api/tauri'
 
 interface PopupData {
   content: string
@@ -21,5 +22,9 @@ export const usePopupStore = create<PopupState>((set) => ({
   
   setPopupData: (data) => set({ popupData: data }),
   showPopup: () => set({ isVisible: true }),
-  hidePopup: () => set({ isVisible: false, popupData: null })
+  hidePopup: () => {
+    // Hide the Tauri popup window
+    invoke('window_hide_popup').catch(() => {})
+    set({ isVisible: false, popupData: null })
+  }
 }))

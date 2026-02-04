@@ -1,6 +1,4 @@
-use std::sync::{Arc, Mutex};
-use std::thread;
-use std::time::Duration;
+use std::sync::{Arc, Mutex, atomic::{AtomicBool, Ordering}};
 use clipboard_master::{CallbackResult, ClipboardHandler, Master};
 use arboard::Clipboard;
 
@@ -8,6 +6,9 @@ use crate::config::AppConfig;
 use crate::database::Database;
 use crate::detector::{ContentType, ContentDetector};
 use tauri::{AppHandle, Manager};
+
+// Global flag to skip next clipboard event (when copying from drawer)
+static SKIP_NEXT_EVENT: AtomicBool = AtomicBool::new(false);
 
 pub struct ClipboardManager {
     db: Arc<Database>,
@@ -52,6 +53,11 @@ impl ClipboardManager {
 
 impl ClipboardHandler for ClipboardHandlerImpl {
     fn on_clipboard_change(&mut self) -> CallbackResult {
+        // Check if we should skip this event (internal copy)
+        if SKIP_NEXT_EVENT.swap(false, Ordering::SeqCst) {
+            return CallbackResult::Next;
+        }
+
         if let Ok(mut clipboard) = Clipboard::new() {
             if let Ok(content) = clipboard.get_text() {
                 // Check for duplicates (5-second window)
@@ -83,10 +89,8 @@ impl ClipboardHandler for ClipboardHandlerImpl {
                         crate::window::show_popup_window(&self.app_handle, &content, &content_type.to_string());
                     }
 
-                    // Always save to history
-                    if let Err(e) = self.db.save_note(&content, content_type, "", "") {
-                        eprintln!("Failed to save note: {}", e);
-                    }
+                    // Note: We don't auto-save here anymore
+                    // Content is only saved when user clicks "Save" in the popup
                 }
             }
         }
@@ -108,6 +112,11 @@ impl ClipboardHandlerImpl {
         }
 
         // Check content type
-        matches!(content_type, ContentType::Phone | ContentType::Email | ContentType::Url | ContentType::Password | ContentType::Code)
+        matches!(content_type, ContentType::Phone | ContentType::Email | ContentType::Url | ContentType::Code)
     }
+}
+
+// Function to set the skip flag (called when copying from drawer)
+pub fn skip_next_clipboard_event() {
+    SKIP_NEXT_EVENT.store(true, Ordering::SeqCst);
 }

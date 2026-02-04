@@ -1,5 +1,5 @@
 use std::sync::Arc;
-use tauri::{generate_context, generate_handler, Builder, Manager};
+use tauri::{generate_context, generate_handler, Builder};
 
 mod clipboard;
 mod commands;
@@ -7,6 +7,7 @@ mod config;
 mod database;
 mod detector;
 mod models;
+mod services;
 mod window;
 
 use clipboard::ClipboardManager;
@@ -51,14 +52,13 @@ fn main() {
             commands::window::window_show_settings,
             commands::window::window_start_drag,
             commands::window::window_set_position,
+            commands::window::window_hide_popup,
         ])
-        .setup(|app| {
+        .setup(move |app| {
             let app_handle = app.handle();
-            let db_clone = db.clone();
-            let config_clone = config.clone();
             
             std::thread::spawn(move || {
-                let mut manager = ClipboardManager::new(db_clone, config_clone, app_handle);
+                let mut manager = ClipboardManager::new(db, config, app_handle);
                 manager.start_monitoring();
             });
             

@@ -1,4 +1,6 @@
 use crate::database::Database;
+use crate::models::Note;
+use crate::clipboard::skip_next_clipboard_event;
 use arboard::Clipboard;
 use std::sync::Arc;
 use tauri::{command, State};
@@ -13,6 +15,9 @@ pub async fn clipboard_get_text() -> Result<String, String> {
 
 #[command]
 pub async fn clipboard_set_text(content: String) -> Result<(), String> {
+    // Skip the next clipboard event to avoid triggering popup
+    skip_next_clipboard_event();
+    
     let mut clipboard = Clipboard::new()
         .map_err(|e| e.to_string())?;
     clipboard.set_text(content)
@@ -23,7 +28,7 @@ pub async fn clipboard_set_text(content: String) -> Result<(), String> {
 pub async fn clipboard_get_history(
     db: State<'_, Arc<Database>>,
     limit: i64,
-) -> Result<Vec<crate::models::note::Note>, String> {
+) -> Result<Vec<Note>, String> {
     db.get_recently_used_notes(limit)
         .map_err(|e| e.to_string())
 }

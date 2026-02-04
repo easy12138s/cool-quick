@@ -5,9 +5,7 @@ import {
   Moon, 
   Sun, 
   Monitor, 
-  Type, 
   Clock, 
-  Shield,
   Save,
   RotateCcw,
   Check

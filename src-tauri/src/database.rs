@@ -1,24 +1,30 @@
 use rusqlite::{params, Connection, Result};
 use chrono::Utc;
 use uuid::Uuid;
+use std::sync::Mutex;
 
 use crate::detector::ContentType;
 use crate::models::{Note, NoteStats};
 
 pub struct Database {
-    conn: Connection,
+    conn: Mutex<Connection>,
 }
+
+// 实现 Send 和 Sync，因为 Mutex 保证了线程安全
+unsafe impl Send for Database {}
+unsafe impl Sync for Database {}
 
 impl Database {
     pub fn new(db_path: &str) -> Result<Self> {
         let conn = Connection::open(db_path)?;
-        let db = Self { conn };
+        let db = Self { conn: Mutex::new(conn) };
         db.initialize_tables()?;
         Ok(db)
     }
 
     fn initialize_tables(&self) -> Result<()> {
-        self.conn.execute_batch(
+        let conn = self.conn.lock().unwrap();
+        conn.execute_batch(
             "
             CREATE TABLE IF NOT EXISTS notes (
                 id TEXT PRIMARY KEY,
@@ -63,7 +69,8 @@ impl Database {
         let id = Uuid::new_v4().to_string();
         let now = Utc::now().timestamp();
         
-        self.conn.execute(
+        let conn = self.conn.lock().unwrap();
+        conn.execute(
             "INSERT INTO notes (id, content, note_type, tags, source_app, created_at, updated_at, is_favorite, is_archived, use_count)
              VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, 0, 0, 0)",
             params![&id, content, note_type.to_string(), tags, source_app, now, now],
@@ -73,13 +80,14 @@ impl Database {
     }
 
     pub fn get_notes(&self, limit: i64, offset: i64, include_archived: bool) -> Result<Vec<Note>> {
+        let conn = self.conn.lock().unwrap();
         let sql = if include_archived {
             "SELECT * FROM notes ORDER BY created_at DESC LIMIT ?1 OFFSET ?2"
         } else {
             "SELECT * FROM notes WHERE is_archived = 0 ORDER BY created_at DESC LIMIT ?1 OFFSET ?2"
         };
         
-        let mut stmt = self.conn.prepare(sql)?;
+        let mut stmt = conn.prepare(sql)?;
         let notes = stmt.query_map(params![limit, offset], |row| {
             Ok(Note {
                 id: row.get(0)?,
@@ -99,7 +107,8 @@ impl Database {
     }
 
     pub fn get_note_by_id(&self, id: &str) -> Result<Option<Note>> {
-        let mut stmt = self.conn.prepare("SELECT * FROM notes WHERE id = ?1")?;
+        let conn = self.conn.lock().unwrap();
+        let mut stmt = conn.prepare("SELECT * FROM notes WHERE id = ?1")?;
         let mut rows = stmt.query(params![id])?;
         
         if let Some(row) = rows.next()? {
@@ -121,16 +130,14 @@ impl Database {
     }
 
     pub fn search_notes(&self, query: &str, note_type: Option<&str>, limit: i64) -> Result<Vec<Note>> {
-        let sql = match note_type {
-            Some(t) => "SELECT * FROM notes WHERE content LIKE ?1 AND note_type = ?2 AND is_archived = 0 ORDER BY created_at DESC LIMIT ?3",
-            None => "SELECT * FROM notes WHERE content LIKE ?1 AND is_archived = 0 ORDER BY created_at DESC LIMIT ?3",
-        };
-        
+        let conn = self.conn.lock().unwrap();
         let search_pattern = format!("%{}%", query);
-        let mut stmt = self.conn.prepare(sql)?;
         
-        let notes = if let Some(t) = note_type {
-            stmt.query_map(params![search_pattern, t, limit], |row| {
+        let notes: Vec<Note> = if let Some(t) = note_type {
+            let mut stmt = conn.prepare(
+                "SELECT * FROM notes WHERE content LIKE ?1 AND note_type = ?2 AND is_archived = 0 ORDER BY created_at DESC LIMIT ?3"
+            )?;
+            let rows = stmt.query_map(params![search_pattern, t, limit], |row| {
                 Ok(Note {
                     id: row.get(0)?,
                     content: row.get(1)?,
@@ -143,9 +150,13 @@ impl Database {
                     is_archived: row.get::<_, i32>(8)? != 0,
                     use_count: row.get(9)?,
                 })
-            })?
+            })?;
+            rows.collect::<Result<Vec<_>>>()?
         } else {
-            stmt.query_map(params![search_pattern, limit], |row| {
+            let mut stmt = conn.prepare(
+                "SELECT * FROM notes WHERE content LIKE ?1 AND is_archived = 0 ORDER BY created_at DESC LIMIT ?2"
+            )?;
+            let rows = stmt.query_map(params![search_pattern, limit], |row| {
                 Ok(Note {
                     id: row.get(0)?,
                     content: row.get(1)?,
@@ -158,24 +169,26 @@ impl Database {
                     is_archived: row.get::<_, i32>(8)? != 0,
                     use_count: row.get(9)?,
                 })
-            })?
+            })?;
+            rows.collect::<Result<Vec<_>>>()?
         };
         
-        notes.collect::<Result<Vec<_>>>()
+        Ok(notes)
     }
 
     pub fn update_note(&self, id: &str, content: Option<&str>, note_type: Option<&str>, tags: Option<Vec<String>>, is_favorite: Option<bool>) -> Result<()> {
+        let conn = self.conn.lock().unwrap();
         let now = Utc::now().timestamp();
         
         if let Some(c) = content {
-            self.conn.execute(
+            conn.execute(
                 "UPDATE notes SET content = ?1, updated_at = ?2 WHERE id = ?3",
                 params![c, now, id],
             )?;
         }
         
         if let Some(t) = note_type {
-            self.conn.execute(
+            conn.execute(
                 "UPDATE notes SET note_type = ?1, updated_at = ?2 WHERE id = ?3",
                 params![t, now, id],
             )?;
@@ -183,14 +196,14 @@ impl Database {
         
         if let Some(tags_vec) = tags {
             let tags_json = serde_json::to_string(&tags_vec).unwrap_or_default();
-            self.conn.execute(
+            conn.execute(
                 "UPDATE notes SET tags = ?1, updated_at = ?2 WHERE id = ?3",
                 params![tags_json, now, id],
             )?;
         }
         
         if let Some(f) = is_favorite {
-            self.conn.execute(
+            conn.execute(
                 "UPDATE notes SET is_favorite = ?1, updated_at = ?2 WHERE id = ?3",
                 params![f as i32, now, id],
             )?;
@@ -200,13 +213,15 @@ impl Database {
     }
 
     pub fn delete_note(&self, id: &str) -> Result<()> {
-        self.conn.execute("DELETE FROM notes WHERE id = ?1", params![id])?;
+        let conn = self.conn.lock().unwrap();
+        conn.execute("DELETE FROM notes WHERE id = ?1", params![id])?;
         Ok(())
     }
 
     pub fn archive_note_by_id(&self, id: &str) -> Result<()> {
+        let conn = self.conn.lock().unwrap();
         let now = Utc::now().timestamp();
-        self.conn.execute(
+        conn.execute(
             "UPDATE notes SET is_archived = 1, updated_at = ?1 WHERE id = ?2",
             params![now, id],
         )?;
@@ -214,8 +229,9 @@ impl Database {
     }
 
     pub fn unarchive_note_by_id(&self, id: &str) -> Result<()> {
+        let conn = self.conn.lock().unwrap();
         let now = Utc::now().timestamp();
-        self.conn.execute(
+        conn.execute(
             "UPDATE notes SET is_archived = 0, updated_at = ?1 WHERE id = ?2",
             params![now, id],
         )?;
@@ -223,8 +239,9 @@ impl Database {
     }
 
     pub fn archive_notes_by_date(&self, days: i64) -> Result<i64> {
+        let conn = self.conn.lock().unwrap();
         let cutoff = Utc::now().timestamp() - (days * 24 * 60 * 60);
-        let count = self.conn.execute(
+        let count = conn.execute(
             "UPDATE notes SET is_archived = 1, updated_at = ?1 WHERE created_at < ?2 AND is_archived = 0",
             params![Utc::now().timestamp(), cutoff],
         )?;
@@ -232,8 +249,9 @@ impl Database {
     }
 
     pub fn archive_notes_by_type(&self, note_type: &str, days: i64) -> Result<i64> {
+        let conn = self.conn.lock().unwrap();
         let cutoff = Utc::now().timestamp() - (days * 24 * 60 * 60);
-        let count = self.conn.execute(
+        let count = conn.execute(
             "UPDATE notes SET is_archived = 1, updated_at = ?1 WHERE note_type = ?2 AND created_at < ?3 AND is_archived = 0",
             params![Utc::now().timestamp(), note_type, cutoff],
         )?;
@@ -241,7 +259,8 @@ impl Database {
     }
 
     pub fn get_archived_notes(&self, limit: i64, offset: i64) -> Result<Vec<Note>> {
-        let mut stmt = self.conn.prepare(
+        let conn = self.conn.lock().unwrap();
+        let mut stmt = conn.prepare(
             "SELECT * FROM notes WHERE is_archived = 1 ORDER BY created_at DESC LIMIT ?1 OFFSET ?2"
         )?;
         
@@ -264,7 +283,8 @@ impl Database {
     }
 
     pub fn get_recently_used_notes(&self, limit: i64) -> Result<Vec<Note>> {
-        let mut stmt = self.conn.prepare(
+        let conn = self.conn.lock().unwrap();
+        let mut stmt = conn.prepare(
             "SELECT * FROM notes WHERE is_archived = 0 ORDER BY use_count DESC, updated_at DESC LIMIT ?1"
         )?;
         
@@ -287,8 +307,9 @@ impl Database {
     }
 
     pub fn import_note(&self, note: &Note) -> Result<()> {
+        let conn = self.conn.lock().unwrap();
         let tags_json = serde_json::to_string(&note.tags).unwrap_or_default();
-        self.conn.execute(
+        conn.execute(
             "INSERT OR REPLACE INTO notes (id, content, note_type, tags, source_app, created_at, updated_at, is_favorite, is_archived, use_count)
              VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)",
             params![
@@ -316,35 +337,36 @@ impl Database {
     }
 
     pub fn get_stats(&self) -> Result<NoteStats> {
+        let conn = self.conn.lock().unwrap();
         let now = Utc::now().timestamp();
         let today_start = now - (now % 86400); // Start of today
         let week_start = now - (7 * 24 * 60 * 60);
 
-        let total: i64 = self.conn.query_row(
+        let total: i64 = conn.query_row(
             "SELECT COUNT(*) FROM notes WHERE is_archived = 0",
             [],
             |row| row.get(0)
         )?;
 
-        let today: i64 = self.conn.query_row(
+        let today: i64 = conn.query_row(
             "SELECT COUNT(*) FROM notes WHERE is_archived = 0 AND created_at >= ?1",
             params![today_start],
             |row| row.get(0)
         )?;
 
-        let week: i64 = self.conn.query_row(
+        let week: i64 = conn.query_row(
             "SELECT COUNT(*) FROM notes WHERE is_archived = 0 AND created_at >= ?1",
             params![week_start],
             |row| row.get(0)
         )?;
 
-        let favorite: i64 = self.conn.query_row(
+        let favorite: i64 = conn.query_row(
             "SELECT COUNT(*) FROM notes WHERE is_archived = 0 AND is_favorite = 1",
             [],
             |row| row.get(0)
         )?;
 
-        let mut stmt = self.conn.prepare(
+        let mut stmt = conn.prepare(
             "SELECT note_type, COUNT(*) FROM notes WHERE is_archived = 0 GROUP BY note_type"
         )?;
         
@@ -365,8 +387,9 @@ impl Database {
     }
 
     pub fn save_window_position(&self, window_name: &str, x: f64, y: f64) -> Result<()> {
+        let conn = self.conn.lock().unwrap();
         let now = Utc::now().timestamp();
-        self.conn.execute(
+        conn.execute(
             "INSERT OR REPLACE INTO window_positions (window_name, x, y, updated_at)
              VALUES (?1, ?2, ?3, ?4)",
             params![window_name, x, y, now],
@@ -375,7 +398,8 @@ impl Database {
     }
 
     pub fn get_window_position(&self, window_name: &str) -> Result<Option<(f64, f64)>> {
-        let mut stmt = self.conn.prepare(
+        let conn = self.conn.lock().unwrap();
+        let mut stmt = conn.prepare(
             "SELECT x, y FROM window_positions WHERE window_name = ?1"
         )?;
         let mut rows = stmt.query(params![window_name])?;

@@ -57,3 +57,9 @@ pub async fn window_set_position(
     }
     Ok(())
 }
+
+#[command]
+pub async fn window_hide_popup(app: AppHandle) -> Result<(), String> {
+    crate::window::hide_popup_window(&app);
+    Ok(())
+}

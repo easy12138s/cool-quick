@@ -1,10 +1,19 @@
 import React, { useState } from 'react'
-import { Search, Bell, Moon, Sun, User } from 'lucide-react'
+import { Search, Bell, Moon, Sun, User, Circle } from 'lucide-react'
 import { useConfigStore } from '../../stores/useConfigStore'
+import { invoke } from '@tauri-apps/api/tauri'
 
 export const Header: React.FC = () => {
   const { effectiveTheme, setTheme } = useConfigStore()
   const [searchQuery, setSearchQuery] = useState('')
+
+  const showFloatingWindow = async () => {
+    try {
+      await invoke('window_show_floating')
+    } catch (e) {
+      console.error('Failed to show floating window:', e)
+    }
+  }
 
   return (
     <header className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-6 py-3 flex items-center justify-between">
@@ -22,6 +31,14 @@ export const Header: React.FC = () => {
       </div>
 
       <div className="flex items-center gap-3">
+        <button
+          onClick={showFloatingWindow}
+          title="打开悬浮窗"
+          className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg text-primary-500"
+        >
+          <Circle size={20} />
+        </button>
+
         <button
           onClick={() => setTheme(effectiveTheme === 'dark' ? 'light' : 'dark')}
           className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"

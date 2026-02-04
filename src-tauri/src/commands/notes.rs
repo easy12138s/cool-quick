@@ -1,5 +1,6 @@
 use crate::database::Database;
-use crate::models::{Note, NoteFilters};
+use crate::models::Note;
+use crate::detector::ContentType;
 use std::sync::Arc;
 use tauri::{command, State};
 
@@ -32,7 +33,17 @@ pub async fn notes_create(
     tags: Vec<String>,
     source_app: String,
 ) -> Result<String, String> {
-    let id = db.save_note(&content, &note_type, &tags, &source_app)
+    // Convert note_type string to ContentType
+    let content_type = match note_type.as_str() {
+        "phone" => ContentType::Phone,
+        "email" => ContentType::Email,
+        "url" => ContentType::Url,
+        "code" => ContentType::Code,
+        _ => ContentType::Text,
+    };
+    
+    let tags_json = serde_json::to_string(&tags).unwrap_or_default();
+    let id = db.save_note(&content, content_type, &tags_json, &source_app)
         .map_err(|e| e.to_string())?;
     Ok(id)
 }
@@ -117,11 +128,12 @@ pub async fn notes_import(
     let notes: Vec<Note> = serde_json::from_str(&data)
         .map_err(|e| format!("Invalid JSON: {}", e))?;
     
+    let total = notes.len();
     let mut success = 0;
     let mut failed = 0;
     
-    for note in notes {
-        match db.import_note(&note) {
+    for note in &notes {
+        match db.import_note(note) {
             Ok(_) => success += 1,
             Err(_) => failed += 1,
         }
@@ -130,7 +142,7 @@ pub async fn notes_import(
     Ok(serde_json::json!({
         "success": success,
         "failed": failed,
-        "total": notes.len()
+        "total": total
     }))
 }
 

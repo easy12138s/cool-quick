@@ -10,7 +10,6 @@ import {
 } from 'recharts'
 import { Note } from '../../stores/useNotesStore'
 import { format, subDays } from 'date-fns'
-import { zhCN } from 'date-fns/locale'
 
 interface TrendChartProps {
   notes: Note[]

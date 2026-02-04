@@ -4,22 +4,17 @@ import {
   ClipboardList, 
   Star, 
   Clock, 
-  TrendingUp,
-  Download,
-  Upload,
-  Settings
+  TrendingUp
 } from 'lucide-react'
-import { useNotesStore } from '../../stores/useNotesStore'
-import { useConfigStore } from '../../stores/useConfigStore'
-import { StatCard } from '../dashboard/StatCard'
-import { TrendChart } from '../dashboard/TrendChart'
-import { TypeChart } from '../dashboard/TypeChart'
-import { RecentActivity } from '../dashboard/RecentActivity'
-import { QuickActions } from '../dashboard/QuickActions'
+import { useNotesStore } from '../stores/useNotesStore'
+import { StatCard } from '../components/dashboard/StatCard'
+import { TrendChart } from '../components/dashboard/TrendChart'
+import { TypeChart } from '../components/dashboard/TypeChart'
+import { RecentActivity } from '../components/dashboard/RecentActivity'
+import { QuickActions } from '../components/dashboard/QuickActions'
 
 export const DashboardPage: React.FC = () => {
   const { notes, loadNotes } = useNotesStore()
-  const { config } = useConfigStore()
 
   useEffect(() => {
     loadNotes()
@@ -39,7 +34,15 @@ export const DashboardPage: React.FC = () => {
     return date >= weekAgo
   }).length
 
-  const stats = [
+  const stats: Array<{
+    title: string
+    value: number
+    icon: typeof ClipboardList
+    color: 'blue' | 'green' | 'yellow' | 'purple' | 'red'
+    trend?: string
+    trendUp?: boolean
+    subtitle?: string
+  }> = [
     {
       title: '总笔记',
       value: totalNotes,

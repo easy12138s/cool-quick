@@ -1,5 +1,4 @@
 import React, { useRef, useEffect, useState, useCallback } from 'react'
-import { motion } from 'framer-motion'
 
 interface VirtualListProps<T> {
   items: T[]
@@ -18,7 +17,6 @@ export function VirtualList<T>({
 }: VirtualListProps<T>) {
   const containerRef = useRef<HTMLDivElement>(null)
   const [visibleRange, setVisibleRange] = useState({ start: 0, end: 20 })
-  const [scrollTop, setScrollTop] = useState(0)
 
   const calculateVisibleRange = useCallback(() => {
     if (!containerRef.current) return
@@ -31,7 +29,6 @@ export function VirtualList<T>({
     const visibleCount = Math.ceil(containerHeight / itemHeight)
     const end = start + visibleCount + overscan
 
-    setScrollTop(scrollTop)
     setVisibleRange({
       start: Math.max(0, start - overscan),
       end: Math.min(items.length, end)

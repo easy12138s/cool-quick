@@ -1,10 +1,10 @@
 import React, { useEffect } from 'react'
 import { 
   createBrowserRouter, 
-  RouterProvider,
-  Navigate
+  RouterProvider
 } from 'react-router-dom'
 import { listen } from '@tauri-apps/api/event'
+import { invoke } from '@tauri-apps/api/tauri'
 import { MainLayout } from './components/layout/MainLayout'
 import { DashboardPage } from './pages/DashboardPage'
 import { NotesPage } from './pages/NotesPage'
@@ -13,8 +13,8 @@ import { SettingsPage } from './pages/SettingsPage'
 import { SearchPage } from './pages/SearchPage'
 import { FavoritesPage } from './pages/FavoritesPage'
 import { StatisticsPage } from './pages/StatisticsPage'
-import FloatingWindow from './components/FloatingWindow'
-import Drawer from './components/Drawer'
+import { FloatingWindow } from './components/FloatingWindow/index'
+import { Drawer } from './components/Drawer/index'
 import Popup from './components/Popup'
 import { setupClipboardListener } from './stores/useNotesStore'
 import { setupThemeListener } from './stores/useConfigStore'
@@ -22,9 +22,25 @@ import { useNotesStore } from './stores/useNotesStore'
 import { useConfigStore } from './stores/useConfigStore'
 import { usePopupStore } from './stores/usePopupStore'
 
-// Window type detection
-const getWindowLabel = () => {
-  return (window as any).__TAURI_METADATA__?.currentWindow?.label || 'main'
+interface TauriEvent {
+  payload: {
+    content: string
+    type: string
+    sourceApp?: string
+  }
+}
+
+// Window type detection from URL
+const getWindowType = (): string => {
+  const params = new URLSearchParams(window.location.search)
+  return params.get('window') || 'main'
+}
+
+// Apply transparent background for special windows
+const applyTransparentBackground = (windowType: string) => {
+  if (windowType !== 'main') {
+    document.body.classList.add('transparent-window')
+  }
 }
 
 // Router for main window
@@ -46,12 +62,10 @@ const mainRouter = createBrowserRouter([
 
 // Floating window component
 const FloatingWindowWrapper: React.FC = () => {
-  const { loadNotes, notes } = useNotesStore()
+  const { notes } = useNotesStore()
   const { config } = useConfigStore()
   
   const handleMouseEnter = () => {
-    // Open drawer window via Tauri
-    const { invoke } = require('@tauri-apps/api/tauri')
     invoke('window_show_drawer')
   }
   
@@ -73,7 +87,6 @@ const DrawerWindowWrapper: React.FC = () => {
   }, [loadNotes])
   
   const handleCopy = async (content: string) => {
-    const { invoke } = require('@tauri-apps/api/tauri')
     await invoke('clipboard_set_text', { content })
   }
   
@@ -94,8 +107,20 @@ const PopupWindowWrapper: React.FC = () => {
   const { loadNotes } = useNotesStore()
   
   const handleSave = async () => {
+    if (popupData) {
+      await invoke('notes_create', {
+        content: popupData.content,
+        noteType: popupData.type,
+        tags: [],
+        sourceApp: popupData.sourceApp || ''
+      })
+    }
     hidePopup()
     await loadNotes()
+  }
+  
+  const handleDismiss = async () => {
+    hidePopup()
   }
   
   if (!popupData) return null
@@ -107,26 +132,25 @@ const PopupWindowWrapper: React.FC = () => {
       sourceApp={popupData.sourceApp}
       autoCloseSeconds={config?.popup_auto_close_seconds || 3}
       onSave={handleSave}
-      onDismiss={hidePopup}
+      onDismiss={handleDismiss}
     />
   )
 }
 
 function App() {
-  const windowLabel = getWindowLabel()
-  const { config, loadConfig } = useConfigStore()
+  const windowType = getWindowType()
+  const { loadConfig } = useConfigStore()
   const { showPopup, setPopupData } = usePopupStore()
   
   useEffect(() => {
-    // Load config
-    loadConfig()
+    // Apply transparent background for special windows
+    applyTransparentBackground(windowType)
     
-    // Setup listeners
+    loadConfig()
     setupClipboardListener()
     setupThemeListener()
     
-    // Listen for clipboard changes (for popup)
-    const unlistenClipboard = listen('clipboard-change', (event: any) => {
+    const unlistenClipboard = listen('clipboard-change', (event: TauriEvent) => {
       setPopupData(event.payload)
       showPopup()
     })
@@ -134,10 +158,10 @@ function App() {
     return () => {
       unlistenClipboard.then(f => f())
     }
-  }, [loadConfig, setPopupData, showPopup])
+  }, [loadConfig, setPopupData, showPopup, windowType])
   
   // Render based on window type
-  switch (windowLabel) {
+  switch (windowType) {
     case 'floating':
       return <FloatingWindowWrapper />
     
