@@ -1,9 +1,10 @@
+#![allow(dead_code)]
+
 use aes_gcm::{
-    aead::{Aead, AeadCore, KeyInit},
-    Aes256Gcm, Key, Nonce
+  aead::{Aead, AeadCore, KeyInit},
+  Aes256Gcm, Key, Nonce
 };
 use bcrypt::{hash, verify, DEFAULT_COST};
-use rand::RngCore;
 use std::fs;
 use std::path::Path;
 

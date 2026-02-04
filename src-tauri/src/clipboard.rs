@@ -11,19 +11,21 @@ use tauri::{AppHandle, Manager};
 static SKIP_NEXT_EVENT: AtomicBool = AtomicBool::new(false);
 
 pub struct ClipboardManager {
-    db: Arc<Database>,
-    config: AppConfig,
-    app_handle: AppHandle,
-    detector: ContentDetector,
-    last_content: Mutex<String>,
+  db: Arc<Database>,
+  config: AppConfig,
+  app_handle: AppHandle,
+  detector: ContentDetector,
+  #[allow(dead_code)]
+  last_content: Mutex<String>,
 }
 
 struct ClipboardHandlerImpl {
-    db: Arc<Database>,
-    app_handle: AppHandle,
-    detector: ContentDetector,
-    config: AppConfig,
-    last_content: Arc<Mutex<String>>,
+  #[allow(dead_code)]
+  db: Arc<Database>,
+  app_handle: AppHandle,
+  detector: ContentDetector,
+  config: AppConfig,
+  last_content: Arc<Mutex<String>>,
 }
 
 impl ClipboardManager {

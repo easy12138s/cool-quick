@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 use rusqlite::{params, Connection, Result};
 use chrono::Utc;
 use uuid::Uuid;

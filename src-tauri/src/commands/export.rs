@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 use std::sync::Arc;
 use tauri::State;
 use crate::services::pdf_service::PdfService;
