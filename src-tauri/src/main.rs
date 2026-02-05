@@ -54,6 +54,8 @@ commands::window::window_show_floating,
       commands::window::window_start_drag,
       commands::window::window_set_position,
       commands::window::window_hide_popup,
+      commands::window::window_start_dragging,
+      commands::window::window_is_visible,
     ])
 .setup(move |app| {
     let app_handle = app.handle();

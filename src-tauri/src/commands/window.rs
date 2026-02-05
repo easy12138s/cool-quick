@@ -66,6 +66,22 @@ pub async fn window_set_position(
 
 #[command]
 pub async fn window_hide_popup(app: AppHandle) -> Result<(), String> {
-    crate::window::hide_popup_window(&app);
-    Ok(())
+  crate::window::hide_popup_window(&app);
+  Ok(())
+}
+
+#[command]
+pub async fn window_start_dragging(app: AppHandle) -> Result<(), String> {
+  if let Some(window) = app.get_window("floating") {
+    window.start_dragging().map_err(|e| e.to_string())?;
+  }
+  Ok(())
+}
+
+#[command]
+pub async fn window_is_visible(app: AppHandle, label: String) -> Result<bool, String> {
+  if let Some(window) = app.get_window(&label) {
+    return window.is_visible().map_err(|e| e.to_string());
+  }
+  Ok(false)
 }
