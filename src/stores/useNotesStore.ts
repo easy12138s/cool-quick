@@ -76,9 +76,9 @@ export const useNotesStore = create<NotesState>((set, get) => ({
     try {
       await invoke('notes_create', {
         content: noteData.content,
-        noteType: noteData.note_type,
+        note_type: noteData.note_type,
         tags: noteData.tags,
-        sourceApp: noteData.source_app || 'CoolQuick',
+        source_app: noteData.source_app || 'CoolQuick',
         title: noteData.title || null,
       })
       get().loadNotes()
