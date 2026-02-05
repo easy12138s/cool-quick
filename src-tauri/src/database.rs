@@ -71,10 +71,18 @@ impl Database {
         let stmt = conn.prepare("PRAGMA table_info(notes)")?;
         let columns: Vec<String> = stmt.column_names().iter().map(|s| s.to_string()).collect();
         if !columns.contains(&"title".to_string()) {
-            conn.execute(
+            match conn.execute(
                 "ALTER TABLE notes ADD COLUMN title TEXT DEFAULT ''",
                 [],
-            )?;
+            ) {
+                Ok(_) => {}
+                Err(e) => {
+                    // Ignore error if column already exists (race condition)
+                    if !e.to_string().contains("duplicate column name") {
+                        return Err(e);
+                    }
+                }
+            };
         }
         
         Ok(())

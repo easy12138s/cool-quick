@@ -160,6 +160,7 @@ export const Drawer: React.FC<DrawerProps> = ({ notes, onRefresh }) => {
           content,
           note_type: detectContentType(textContent),
           title: title || '',
+          source_app: 'CoolQuick',
           is_favorite: false,
           tags: [],
         })

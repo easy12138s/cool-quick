@@ -12,7 +12,7 @@ interface NotesState {
   selectedNote: Note | null
   isLoading: boolean
   error: string | null
-  
+
   // Actions
   loadNotes: () => Promise<void>
   loadArchivedNotes: () => Promise<void>
@@ -25,11 +25,17 @@ interface NotesState {
   selectNote: (note: Note | null) => void
   importNotes: (jsonData: string) => Promise<{ success: number; failed: number }>
   exportNotes: () => Promise<string>
-  
+
   // Getters
   getNoteById: (id: string) => Note | undefined
   getFilteredNotes: (filters: NoteFilters) => Note[]
-  getStats: () => { total: number; today: number; week: number; favorite: number; byType: Record<string, number> }
+  getStats: () => {
+    total: number
+    today: number
+    week: number
+    favorite: number
+    byType: Record<string, number>
+  }
 }
 
 export const useNotesStore = create<NotesState>((set, get) => ({
@@ -42,10 +48,10 @@ export const useNotesStore = create<NotesState>((set, get) => ({
   loadNotes: async () => {
     set({ isLoading: true, error: null })
     try {
-      const notes = await invoke<Note[]>('notes_get_all', { 
-        limit: 1000, 
-        offset: 0, 
-        includeArchived: false 
+      const notes = await invoke<Note[]>('notes_get_all', {
+        limit: 1000,
+        offset: 0,
+        includeArchived: false,
       })
       set({ notes, isLoading: false })
     } catch (error) {
@@ -56,9 +62,9 @@ export const useNotesStore = create<NotesState>((set, get) => ({
   loadArchivedNotes: async () => {
     set({ isLoading: true, error: null })
     try {
-      const notes = await invoke<Note[]>('notes_get_archived', { 
-        limit: 1000, 
-        offset: 0 
+      const notes = await invoke<Note[]>('notes_get_archived', {
+        limit: 1000,
+        offset: 0,
       })
       set({ archivedNotes: notes, isLoading: false })
     } catch (error) {
@@ -66,9 +72,15 @@ export const useNotesStore = create<NotesState>((set, get) => ({
     }
   },
 
-  addNote: async (noteData) => {
+  addNote: async noteData => {
     try {
-      await invoke('notes_create', noteData)
+      await invoke('notes_create', {
+        content: noteData.content,
+        noteType: noteData.note_type,
+        tags: noteData.tags,
+        sourceApp: noteData.source_app || 'CoolQuick',
+        title: noteData.title || null,
+      })
       get().loadNotes()
     } catch (error) {
       set({ error: String(error) })
@@ -79,36 +91,36 @@ export const useNotesStore = create<NotesState>((set, get) => ({
     try {
       await invoke('notes_update', { id, ...updates })
       set(state => ({
-        notes: state.notes.map(n => 
+        notes: state.notes.map(n =>
           n.id === id ? { ...n, ...updates, updated_at: Date.now() / 1000 } : n
-        )
+        ),
       }))
     } catch (error) {
       set({ error: String(error) })
     }
   },
 
-  deleteNote: async (id) => {
+  deleteNote: async id => {
     try {
       await invoke('notes_delete', { id })
       set(state => ({
         notes: state.notes.filter(n => n.id !== id),
         archivedNotes: state.archivedNotes.filter(n => n.id !== id),
-        selectedNote: state.selectedNote?.id === id ? null : state.selectedNote
+        selectedNote: state.selectedNote?.id === id ? null : state.selectedNote,
       }))
     } catch (error) {
       set({ error: String(error) })
     }
   },
 
-  archiveNote: async (id) => {
+  archiveNote: async id => {
     try {
       await invoke('notes_archive', { id })
       const note = get().notes.find(n => n.id === id)
       if (note) {
         set(state => ({
           notes: state.notes.filter(n => n.id !== id),
-          archivedNotes: [note, ...state.archivedNotes]
+          archivedNotes: [note, ...state.archivedNotes],
         }))
       }
     } catch (error) {
@@ -116,14 +128,14 @@ export const useNotesStore = create<NotesState>((set, get) => ({
     }
   },
 
-  unarchiveNote: async (id) => {
+  unarchiveNote: async id => {
     try {
       await invoke('notes_unarchive', { id })
       const note = get().archivedNotes.find(n => n.id === id)
       if (note) {
         set(state => ({
           archivedNotes: state.archivedNotes.filter(n => n.id !== id),
-          notes: [note, ...state.notes]
+          notes: [note, ...state.notes],
         }))
       }
     } catch (error) {
@@ -135,25 +147,25 @@ export const useNotesStore = create<NotesState>((set, get) => ({
     try {
       await invoke('notes_update', { id, isFavorite: !currentState })
       set(state => ({
-        notes: state.notes.map(n => 
-          n.id === id ? { ...n, is_favorite: !currentState } : n
-        ),
+        notes: state.notes.map(n => (n.id === id ? { ...n, is_favorite: !currentState } : n)),
         archivedNotes: state.archivedNotes.map(n =>
           n.id === id ? { ...n, is_favorite: !currentState } : n
-        )
+        ),
       }))
     } catch (error) {
       set({ error: String(error) })
     }
   },
 
-  selectNote: (note) => {
+  selectNote: note => {
     set({ selectedNote: note })
   },
 
-  importNotes: async (jsonData) => {
+  importNotes: async jsonData => {
     try {
-      const result = await invoke<{ success: number; failed: number }>('notes_import', { data: jsonData })
+      const result = await invoke<{ success: number; failed: number }>('notes_import', {
+        data: jsonData,
+      })
       get().loadNotes()
       return result
     } catch (error) {
@@ -171,19 +183,20 @@ export const useNotesStore = create<NotesState>((set, get) => ({
     }
   },
 
-  getNoteById: (id) => {
+  getNoteById: id => {
     const state = get()
     return state.notes.find(n => n.id === id) || state.archivedNotes.find(n => n.id === id)
   },
 
-  getFilteredNotes: (filters) => {
+  getFilteredNotes: filters => {
     let filtered = get().notes
 
     if (filters.search) {
       const search = filters.search.toLowerCase()
-      filtered = filtered.filter(n => 
-        n.content.toLowerCase().includes(search) ||
-        n.tags.some(t => t.toLowerCase().includes(search))
+      filtered = filtered.filter(
+        n =>
+          n.content.toLowerCase().includes(search) ||
+          n.tags.some(t => t.toLowerCase().includes(search))
       )
     }
 
@@ -206,9 +219,7 @@ export const useNotesStore = create<NotesState>((set, get) => ({
     }
 
     if (filters.tags && filters.tags.length > 0) {
-      filtered = filtered.filter(n => 
-        filters.tags?.some(tag => n.tags.includes(tag))
-      )
+      filtered = filtered.filter(n => filters.tags?.some(tag => n.tags.includes(tag)))
     }
 
     return filtered
@@ -231,15 +242,15 @@ export const useNotesStore = create<NotesState>((set, get) => ({
       today: allNotes.filter(n => n.created_at * 1000 >= today).length,
       week: allNotes.filter(n => n.created_at * 1000 >= weekAgo).length,
       favorite: allNotes.filter(n => n.is_favorite).length,
-      byType
+      byType,
     }
-  }
+  },
 }))
 
 // Setup clipboard listener
 export const setupClipboardListener = () => {
   const loadNotes = useNotesStore.getState().loadNotes
-  
+
   listen('clipboard-change', () => {
     loadNotes()
   })
