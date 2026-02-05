@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react'
+import { forwardRef, useState, useRef, useEffect, useCallback, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Star, Trash2, CheckCircle2, GripVertical, Edit3 } from 'lucide-react'
 import type { Note } from '../../stores/useNotesStore'
@@ -33,7 +33,7 @@ const typeLabels: Record<string, string> = {
   text: '文本',
 }
 
-export const NoteItem = React.forwardRef<HTMLDivElement, NoteItemProps>(
+export const NoteItem = forwardRef<HTMLDivElement, NoteItemProps>(
   (
     { note, isCopied, isSelected, onCopy, onDelete, onToggleFavorite, onSelect, onEdit, index },
     ref
