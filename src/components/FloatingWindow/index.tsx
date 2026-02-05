@@ -59,16 +59,32 @@ export const FloatingWindow: React.FC<FloatingWindowProps> = ({ onMouseEnter, no
     }
   }, [])
 
-  // 点击打开主窗口
-  const handleClick = useCallback(async () => {
-    await invoke('window_show_main')
+  const isDraggingRef = useRef(false)
+  const mouseDownTimeRef = useRef(0)
+
+  // 鼠标按下
+  const handleMouseDown = useCallback(async (e: React.MouseEvent) => {
+    // 只有左键才处理
+    if (e.button !== 0) return
+
+    mouseDownTimeRef.current = Date.now()
+    isDraggingRef.current = false
+
+    // 延迟一点再开始拖动，以区分点击和拖动
+    setTimeout(async () => {
+      if (Date.now() - mouseDownTimeRef.current > 150) {
+        isDraggingRef.current = true
+        await invoke('window_start_dragging')
+      }
+    }, 150)
   }, [])
 
-  // 开始拖动
-  const handleMouseDown = useCallback(async (e: React.MouseEvent) => {
-    // 只有左键才触发拖动
-    if (e.button === 0) {
-      await invoke('window_start_dragging')
+  // 鼠标释放 - 判断是点击还是拖动
+  const handleMouseUp = useCallback(async () => {
+    const duration = Date.now() - mouseDownTimeRef.current
+    // 如果按下时间很短，认为是点击
+    if (duration < 200 && !isDraggingRef.current) {
+      await invoke('window_show_main')
     }
   }, [])
 
@@ -83,8 +99,8 @@ export const FloatingWindow: React.FC<FloatingWindowProps> = ({ onMouseEnter, no
       }}
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
-      onClick={handleClick}
       onMouseDown={handleMouseDown}
+      onMouseUp={handleMouseUp}
     >
       <motion.div
         className="relative"
