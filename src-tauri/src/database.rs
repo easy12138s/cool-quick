@@ -30,6 +30,7 @@ impl Database {
             "
             CREATE TABLE IF NOT EXISTS notes (
                 id TEXT PRIMARY KEY,
+                title TEXT DEFAULT '',
                 content TEXT NOT NULL,
                 note_type TEXT NOT NULL,
                 tags TEXT DEFAULT '[]',
@@ -64,18 +65,25 @@ impl Database {
             );
             "
         )?;
+        
+        // Migration: Add title column if not exists (for existing databases)
+        conn.execute(
+            "ALTER TABLE notes ADD COLUMN IF NOT EXISTS title TEXT DEFAULT ''",
+            [],
+        )?;
+        
         Ok(())
     }
 
-    pub fn save_note(&self, content: &str, note_type: ContentType, tags: &str, source_app: &str) -> Result<String> {
+    pub fn save_note(&self, content: &str, note_type: ContentType, tags: &str, source_app: &str, title: Option<&str>) -> Result<String> {
         let id = Uuid::new_v4().to_string();
         let now = Utc::now().timestamp();
         
         let conn = self.conn.lock().unwrap();
         conn.execute(
-            "INSERT INTO notes (id, content, note_type, tags, source_app, created_at, updated_at, is_favorite, is_archived, use_count)
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, 0, 0, 0)",
-            params![&id, content, note_type.to_string(), tags, source_app, now, now],
+            "INSERT INTO notes (id, title, content, note_type, tags, source_app, created_at, updated_at, is_favorite, is_archived, use_count)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, 0, 0, 0)",
+            params![&id, title.unwrap_or(""), content, note_type.to_string(), tags, source_app, now, now],
         )?;
         
         Ok(id)
@@ -93,15 +101,16 @@ impl Database {
         let notes = stmt.query_map(params![limit, offset], |row| {
             Ok(Note {
                 id: row.get(0)?,
-                content: row.get(1)?,
-                note_type: row.get(2)?,
-                tags: serde_json::from_str(&row.get::<_, String>(3)?).unwrap_or_default(),
-                source_app: row.get(4)?,
-                created_at: row.get(5)?,
-                updated_at: row.get(6)?,
-                is_favorite: row.get::<_, i32>(7)? != 0,
-                is_archived: row.get::<_, i32>(8)? != 0,
-                use_count: row.get(9)?,
+                title: row.get(1)?,
+                content: row.get(2)?,
+                note_type: row.get(3)?,
+                tags: serde_json::from_str(&row.get::<_, String>(4)?).unwrap_or_default(),
+                source_app: row.get(5)?,
+                created_at: row.get(6)?,
+                updated_at: row.get(7)?,
+                is_favorite: row.get::<_, i32>(8)? != 0,
+                is_archived: row.get::<_, i32>(9)? != 0,
+                use_count: row.get(10)?,
             })
         })?;
         
@@ -116,15 +125,16 @@ impl Database {
         if let Some(row) = rows.next()? {
             Ok(Some(Note {
                 id: row.get(0)?,
-                content: row.get(1)?,
-                note_type: row.get(2)?,
-                tags: serde_json::from_str(&row.get::<_, String>(3)?).unwrap_or_default(),
-                source_app: row.get(4)?,
-                created_at: row.get(5)?,
-                updated_at: row.get(6)?,
-                is_favorite: row.get::<_, i32>(7)? != 0,
-                is_archived: row.get::<_, i32>(8)? != 0,
-                use_count: row.get(9)?,
+                title: row.get(1)?,
+                content: row.get(2)?,
+                note_type: row.get(3)?,
+                tags: serde_json::from_str(&row.get::<_, String>(4)?).unwrap_or_default(),
+                source_app: row.get(5)?,
+                created_at: row.get(6)?,
+                updated_at: row.get(7)?,
+                is_favorite: row.get::<_, i32>(8)? != 0,
+                is_archived: row.get::<_, i32>(9)? != 0,
+                use_count: row.get(10)?,
             }))
         } else {
             Ok(None)
@@ -142,15 +152,16 @@ impl Database {
             let rows = stmt.query_map(params![search_pattern, t, limit], |row| {
                 Ok(Note {
                     id: row.get(0)?,
-                    content: row.get(1)?,
-                    note_type: row.get(2)?,
-                    tags: serde_json::from_str(&row.get::<_, String>(3)?).unwrap_or_default(),
-                    source_app: row.get(4)?,
-                    created_at: row.get(5)?,
-                    updated_at: row.get(6)?,
-                    is_favorite: row.get::<_, i32>(7)? != 0,
-                    is_archived: row.get::<_, i32>(8)? != 0,
-                    use_count: row.get(9)?,
+                    title: row.get(1)?,
+                    content: row.get(2)?,
+                    note_type: row.get(3)?,
+                    tags: serde_json::from_str(&row.get::<_, String>(4)?).unwrap_or_default(),
+                    source_app: row.get(5)?,
+                    created_at: row.get(6)?,
+                    updated_at: row.get(7)?,
+                    is_favorite: row.get::<_, i32>(8)? != 0,
+                    is_archived: row.get::<_, i32>(9)? != 0,
+                    use_count: row.get(10)?,
                 })
             })?;
             rows.collect::<Result<Vec<_>>>()?
@@ -161,15 +172,16 @@ impl Database {
             let rows = stmt.query_map(params![search_pattern, limit], |row| {
                 Ok(Note {
                     id: row.get(0)?,
-                    content: row.get(1)?,
-                    note_type: row.get(2)?,
-                    tags: serde_json::from_str(&row.get::<_, String>(3)?).unwrap_or_default(),
-                    source_app: row.get(4)?,
-                    created_at: row.get(5)?,
-                    updated_at: row.get(6)?,
-                    is_favorite: row.get::<_, i32>(7)? != 0,
-                    is_archived: row.get::<_, i32>(8)? != 0,
-                    use_count: row.get(9)?,
+                    title: row.get(1)?,
+                    content: row.get(2)?,
+                    note_type: row.get(3)?,
+                    tags: serde_json::from_str(&row.get::<_, String>(4)?).unwrap_or_default(),
+                    source_app: row.get(5)?,
+                    created_at: row.get(6)?,
+                    updated_at: row.get(7)?,
+                    is_favorite: row.get::<_, i32>(8)? != 0,
+                    is_archived: row.get::<_, i32>(9)? != 0,
+                    use_count: row.get(10)?,
                 })
             })?;
             rows.collect::<Result<Vec<_>>>()?
@@ -269,15 +281,16 @@ impl Database {
         let notes = stmt.query_map(params![limit, offset], |row| {
             Ok(Note {
                 id: row.get(0)?,
-                content: row.get(1)?,
-                note_type: row.get(2)?,
-                tags: serde_json::from_str(&row.get::<_, String>(3)?).unwrap_or_default(),
-                source_app: row.get(4)?,
-                created_at: row.get(5)?,
-                updated_at: row.get(6)?,
-                is_favorite: row.get::<_, i32>(7)? != 0,
-                is_archived: row.get::<_, i32>(8)? != 0,
-                use_count: row.get(9)?,
+                title: row.get(1)?,
+                content: row.get(2)?,
+                note_type: row.get(3)?,
+                tags: serde_json::from_str(&row.get::<_, String>(4)?).unwrap_or_default(),
+                source_app: row.get(5)?,
+                created_at: row.get(6)?,
+                updated_at: row.get(7)?,
+                is_favorite: row.get::<_, i32>(8)? != 0,
+                is_archived: row.get::<_, i32>(9)? != 0,
+                use_count: row.get(10)?,
             })
         })?;
         
@@ -293,15 +306,16 @@ impl Database {
         let notes = stmt.query_map(params![limit], |row| {
             Ok(Note {
                 id: row.get(0)?,
-                content: row.get(1)?,
-                note_type: row.get(2)?,
-                tags: serde_json::from_str(&row.get::<_, String>(3)?).unwrap_or_default(),
-                source_app: row.get(4)?,
-                created_at: row.get(5)?,
-                updated_at: row.get(6)?,
-                is_favorite: row.get::<_, i32>(7)? != 0,
-                is_archived: row.get::<_, i32>(8)? != 0,
-                use_count: row.get(9)?,
+                title: row.get(1)?,
+                content: row.get(2)?,
+                note_type: row.get(3)?,
+                tags: serde_json::from_str(&row.get::<_, String>(4)?).unwrap_or_default(),
+                source_app: row.get(5)?,
+                created_at: row.get(6)?,
+                updated_at: row.get(7)?,
+                is_favorite: row.get::<_, i32>(8)? != 0,
+                is_archived: row.get::<_, i32>(9)? != 0,
+                use_count: row.get(10)?,
             })
         })?;
         
@@ -312,10 +326,11 @@ impl Database {
         let conn = self.conn.lock().unwrap();
         let tags_json = serde_json::to_string(&note.tags).unwrap_or_default();
         conn.execute(
-            "INSERT OR REPLACE INTO notes (id, content, note_type, tags, source_app, created_at, updated_at, is_favorite, is_archived, use_count)
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)",
+            "INSERT OR REPLACE INTO notes (id, title, content, note_type, tags, source_app, created_at, updated_at, is_favorite, is_archived, use_count)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11)",
             params![
                 &note.id,
+                &note.title,
                 &note.content,
                 &note.note_type,
                 tags_json,

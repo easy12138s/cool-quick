@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Star, Trash2, CheckCircle2, GripVertical } from 'lucide-react'
+import { Star, Trash2, CheckCircle2, GripVertical, Edit3 } from 'lucide-react'
 import type { Note } from '../../stores/useNotesStore'
 
 interface NoteItemProps {
@@ -11,6 +11,7 @@ interface NoteItemProps {
   onDelete: (id: string) => void
   onToggleFavorite: (id: string, isFavorite: boolean) => void
   onSelect: (id: string) => void
+  onEdit?: (note: Note) => void
   index: number
 }
 
@@ -33,7 +34,10 @@ const typeLabels: Record<string, string> = {
 }
 
 export const NoteItem = React.forwardRef<HTMLDivElement, NoteItemProps>(
-  ({ note, isCopied, isSelected, onCopy, onDelete, onToggleFavorite, onSelect, index }, ref) => {
+  (
+    { note, isCopied, isSelected, onCopy, onDelete, onToggleFavorite, onSelect, onEdit, index },
+    ref
+  ) => {
     const [isHovered, setIsHovered] = useState(false)
     const [isDeleting, setIsDeleting] = useState(false)
     const [showDelete, setShowDelete] = useState(false)
@@ -198,6 +202,16 @@ export const NoteItem = React.forwardRef<HTMLDivElement, NoteItemProps>(
                   exit={{ opacity: 0, x: 10 }}
                   className="flex items-center gap-1"
                 >
+                  <button
+                    onClick={e => {
+                      e.stopPropagation()
+                      onEdit?.(note)
+                    }}
+                    className="p-1.5 text-slate-300 hover:text-blue-500 rounded-lg transition-colors"
+                    title="编辑"
+                  >
+                    <Edit3 size={14} />
+                  </button>
                   <button
                     onClick={handleFavorite}
                     className={`p-1.5 rounded-lg transition-colors ${

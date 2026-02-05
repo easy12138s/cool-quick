@@ -10,12 +10,14 @@ import {
   Square,
   Clock,
   ArrowUpDown,
+  Plus,
 } from 'lucide-react'
 import { invoke } from '@tauri-apps/api/tauri'
 import { NoteItem } from './NoteItem'
 import { useNoteFilter } from './useNoteFilter'
 import { useDrawerAutoHide } from './useDrawerAutoHide'
 import { useNotesStore } from '../../stores/useNotesStore'
+import { EditorModal } from '../Editor/EditorModal'
 import type { Note } from '../../stores/useNotesStore'
 
 interface DrawerProps {
@@ -36,6 +38,9 @@ export const Drawer: React.FC<DrawerProps> = ({ notes, onRefresh }) => {
   const [copiedId, setCopiedId] = useState<string | null>(null)
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const [isRefreshing, setIsRefreshing] = useState(false)
+  const [isEditorOpen, setIsEditorOpen] = useState(false)
+  const [editingNote, setEditingNote] = useState<Note | null>(null)
+  const [editorMode, setEditorMode] = useState<'create' | 'edit'>('create')
   const searchInputRef = useRef<HTMLInputElement>(null)
 
   const {
@@ -54,7 +59,7 @@ export const Drawer: React.FC<DrawerProps> = ({ notes, onRefresh }) => {
     delay: 0, // 鼠标离开立即隐藏
   })
 
-  const { toggleFavorite, deleteNote, exportNotes } = useNotesStore()
+  const { toggleFavorite, deleteNote, exportNotes, addNote, updateNote } = useNotesStore()
 
   // 处理复制
   const handleCopy = useCallback(
@@ -128,6 +133,57 @@ export const Drawer: React.FC<DrawerProps> = ({ notes, onRefresh }) => {
     }
   }, [exportNotes])
 
+  // 处理编辑笔记
+  const handleEditNote = useCallback((note: Note) => {
+    setEditingNote(note)
+    setEditorMode('edit')
+    setIsEditorOpen(true)
+  }, [])
+
+  // 处理新建笔记
+  const handleCreateNote = useCallback(() => {
+    setEditingNote(null)
+    setEditorMode('create')
+    setIsEditorOpen(true)
+  }, [])
+
+  // 处理保存笔记
+  const handleSaveNote = useCallback(
+    async (content: string, title?: string) => {
+      if (editorMode === 'create') {
+        // 从内容中提取纯文本作为类型检测
+        const tempDiv = document.createElement('div')
+        tempDiv.innerHTML = content
+        const textContent = tempDiv.textContent || tempDiv.innerText || ''
+
+        await addNote({
+          content,
+          note_type: detectContentType(textContent),
+          title: title || '',
+          is_favorite: false,
+          tags: [],
+        })
+      } else if (editingNote) {
+        await updateNote(editingNote.id, {
+          content,
+          title: title || editingNote.title,
+        })
+      }
+      await onRefresh()
+    },
+    [editorMode, editingNote, addNote, updateNote, onRefresh]
+  )
+
+  // 检测内容类型
+  const detectContentType = (content: string): string => {
+    if (/^1[3-9]\d{9}$/.test(content)) return 'phone'
+    if (/^[\w.-]+@[\w.-]+\.\w+$/.test(content)) return 'email'
+    if (/^https?:\/\//.test(content)) return 'url'
+    if (content.includes('{') || content.includes('}') || content.includes('function'))
+      return 'code'
+    return 'text'
+  }
+
   // 快捷键
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -146,11 +202,16 @@ export const Drawer: React.FC<DrawerProps> = ({ notes, onRefresh }) => {
         e.preventDefault()
         searchInputRef.current?.focus()
       }
+      // Ctrl/Cmd + N 新建笔记
+      if (e.key === 'n' && (e.ctrlKey || e.metaKey) && !e.shiftKey) {
+        e.preventDefault()
+        handleCreateNote()
+      }
     }
 
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [handleSelectAll, handleBatchDelete, selectedIds.size])
+  }, [handleSelectAll, handleBatchDelete, selectedIds.size, handleCreateNote])
 
   const hasSelection = selectedIds.size > 0
 
@@ -189,8 +250,17 @@ export const Drawer: React.FC<DrawerProps> = ({ notes, onRefresh }) => {
 
         {/* 工具栏 */}
         <div className="flex items-center justify-between">
-          {/* 批量操作 */}
+          {/* 批量操作和新建 */}
           <div className="flex items-center gap-2">
+            <button
+              onClick={handleCreateNote}
+              className="flex items-center gap-1.5 px-2 py-1.5 text-xs text-white bg-primary hover:bg-primary-600 rounded-lg transition-colors"
+              title="新建笔记 (Ctrl+N)"
+            >
+              <Plus size={14} />
+              <span>新建</span>
+            </button>
+            <span className="w-px h-4 bg-slate-200 dark:bg-slate-700 mx-1" />
             <button
               onClick={handleSelectAll}
               className="flex items-center gap-1.5 px-2 py-1.5 text-xs text-slate-600 hover:text-primary hover:bg-primary/10 rounded-lg transition-colors"
@@ -282,6 +352,7 @@ export const Drawer: React.FC<DrawerProps> = ({ notes, onRefresh }) => {
               onDelete={deleteNote}
               onToggleFavorite={toggleFavorite}
               onSelect={handleSelect}
+              onEdit={handleEditNote}
               index={index}
             />
           ))}
@@ -328,6 +399,15 @@ export const Drawer: React.FC<DrawerProps> = ({ notes, onRefresh }) => {
           {filteredNotes.length} / {notes.length}
         </div>
       </div>
+
+      {/* 编辑器弹窗 */}
+      <EditorModal
+        isOpen={isEditorOpen}
+        onClose={() => setIsEditorOpen(false)}
+        onSave={handleSaveNote}
+        note={editingNote}
+        mode={editorMode}
+      />
     </motion.div>
   )
 }

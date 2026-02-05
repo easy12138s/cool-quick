@@ -5,6 +5,7 @@ use serde::{Deserialize, Serialize};
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Note {
     pub id: String,
+    pub title: String,
     pub content: String,
     pub note_type: String,
     pub tags: Vec<String>,
