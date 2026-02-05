@@ -43,7 +43,7 @@
         "height": 800,
         "resizable": true,
         "center": true,
-        "visible": true,
+        "visible": false,
         "url": "/"
       },
       {
@@ -54,9 +54,9 @@
         "resizable": false,
         "decorations": false,
         "alwaysOnTop": true,
-        "skipTaskbar": true,
+        "skipTaskbar": false,
         "transparent": true,
-        "visible": false,
+        "visible": true,
         "url": "/?window=floating"
       },
       {

@@ -1,5 +1,5 @@
 use std::sync::Arc;
-use tauri::{generate_context, generate_handler, Builder, Manager};
+use tauri::{generate_context, generate_handler, Builder, Manager, SystemTray, SystemTrayEvent, SystemTrayMenu, SystemTrayMenuItem};
 
 mod clipboard;
 mod commands;
@@ -15,17 +15,62 @@ use config::AppConfig;
 use database::Database;
 
 fn main() {
-    // Initialize configuration
-    let config = AppConfig::load().expect("Failed to load configuration");
-    
-    // Initialize database
-    let db = Database::new(&config.db_path).expect("Failed to initialize database");
-    let db = Arc::new(db);
+  // Initialize configuration
+  let config = AppConfig::load().expect("Failed to load configuration");
 
-    Builder::default()
-        .manage(db.clone())
-        .manage(config.clone())
-        .invoke_handler(generate_handler![
+  // Initialize database
+  let db = Database::new(&config.db_path).expect("Failed to initialize database");
+  let db = Arc::new(db);
+
+  // 创建系统托盘菜单
+  let tray_menu = SystemTrayMenu::new()
+    .add_item(SystemTrayMenuItem::new("打开主窗口", "show_main"))
+    .add_native_item(SystemTrayMenuItem::Separator)
+    .add_item(SystemTrayMenuItem::new("设置", "settings"))
+    .add_native_item(SystemTrayMenuItem::Separator)
+    .add_item(SystemTrayMenuItem::new("退出", "quit"));
+
+  let system_tray = SystemTray::new()
+    .with_menu(tray_menu);
+
+  Builder::default()
+    .manage(db.clone())
+    .manage(config.clone())
+    .system_tray(system_tray)
+    .on_system_tray_event(|app, event| {
+      match event {
+        SystemTrayEvent::MenuItemClick { id, .. } => {
+          match id.as_str() {
+            "show_main" => {
+              if let Some(window) = app.get_window("main") {
+                window.show().unwrap();
+                window.set_focus().unwrap();
+              }
+            }
+            "settings" => {
+              crate::window::show_settings_window(app);
+            }
+            "quit" => {
+              std::process::exit(0);
+            }
+            _ => {}
+          }
+        }
+        SystemTrayEvent::LeftClick { .. } => {
+          // 点击托盘图标打开主窗口
+          if let Some(window) = app.get_window("main") {
+            if window.is_visible().unwrap_or(false) {
+              window.hide().unwrap();
+            } else {
+              window.show().unwrap();
+              window.set_focus().unwrap();
+            }
+          }
+        }
+        _ => {}
+      }
+    })
+    .invoke_handler(generate_handler![
             commands::notes::notes_get_all,
             commands::notes::notes_get_by_id,
             commands::notes::notes_create,
