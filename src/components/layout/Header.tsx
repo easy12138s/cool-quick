@@ -1,10 +1,10 @@
 import React, { useState } from 'react'
-import { Search, Bell, Moon, Sun, User, Circle } from 'lucide-react'
+import { Search, Bell, Moon, Sun, Monitor, Circle } from 'lucide-react'
 import { useConfigStore } from '../../stores/useConfigStore'
 import { invoke } from '@tauri-apps/api/tauri'
 
 export const Header: React.FC = () => {
-  const { effectiveTheme, setTheme } = useConfigStore()
+  const { config, effectiveTheme, setTheme } = useConfigStore()
   const [searchQuery, setSearchQuery] = useState('')
 
   const showFloatingWindow = async () => {
@@ -15,6 +15,30 @@ export const Header: React.FC = () => {
     }
   }
 
+  // Cycle through themes: light → dark → system → light
+  const cycleTheme = () => {
+    const themes: Array<'light' | 'dark' | 'system'> = ['light', 'dark', 'system']
+    const currentIndex = themes.indexOf(config.theme)
+    const nextIndex = (currentIndex + 1) % themes.length
+    setTheme(themes[nextIndex])
+  }
+
+  // Get icon and label based on current theme
+  const getThemeDisplay = () => {
+    switch (config.theme) {
+      case 'light':
+        return { icon: <Sun size={20} />, label: '浅色模式' }
+      case 'dark':
+        return { icon: <Moon size={20} />, label: '深色模式' }
+      case 'system':
+        return { icon: <Monitor size={20} />, label: '跟随系统' }
+      default:
+        return { icon: <Sun size={20} />, label: '浅色模式' }
+    }
+  }
+
+  const themeDisplay = getThemeDisplay()
+
   return (
     <header className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-6 py-3 flex items-center justify-between">
       <div className="flex-1 max-w-xl">
@@ -24,7 +48,7 @@ export const Header: React.FC = () => {
             type="text"
             placeholder="全局搜索笔记... (Ctrl+Shift+V)"
             value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
+            onChange={e => setSearchQuery(e.target.value)}
             className="w-full pl-10 pr-4 py-2 bg-gray-100 dark:bg-gray-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
           />
         </div>
@@ -40,19 +64,17 @@ export const Header: React.FC = () => {
         </button>
 
         <button
-          onClick={() => setTheme(effectiveTheme === 'dark' ? 'light' : 'dark')}
-          className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
+          onClick={cycleTheme}
+          title={`切换主题模式 (${themeDisplay.label})`}
+          className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg flex items-center gap-2"
         >
-          {effectiveTheme === 'dark' ? <Sun size={20} /> : <Moon size={20} />}
+          {themeDisplay.icon}
+          <span className="text-sm text-gray-600 dark:text-gray-300">{themeDisplay.label}</span>
         </button>
-        
+
         <button className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg relative">
           <Bell size={20} />
           <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full" />
-        </button>
-        
-        <button className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg">
-          <User size={20} />
         </button>
       </div>
     </header>
