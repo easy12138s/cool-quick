@@ -1,8 +1,5 @@
 import React, { useEffect } from 'react'
-import { 
-  createBrowserRouter, 
-  RouterProvider
-} from 'react-router-dom'
+import { createHashRouter, RouterProvider } from 'react-router-dom'
 import { listen } from '@tauri-apps/api/event'
 import { invoke } from '@tauri-apps/api/tauri'
 import { MainLayout } from './components/layout/MainLayout'
@@ -43,8 +40,8 @@ const applyTransparentBackground = (windowType: string) => {
   }
 }
 
-// Router for main window
-const mainRouter = createBrowserRouter([
+// Router for main window - use HashRouter for Tauri desktop app
+const mainRouter = createHashRouter([
   {
     path: '/',
     element: <MainLayout />,
@@ -56,48 +53,35 @@ const mainRouter = createBrowserRouter([
       { path: 'search', element: <SearchPage /> },
       { path: 'statistics', element: <StatisticsPage /> },
       { path: 'settings', element: <SettingsPage /> },
-    ]
-  }
+    ],
+  },
 ])
 
 // Floating window component
 const FloatingWindowWrapper: React.FC = () => {
   const { notes } = useNotesStore()
   const { config } = useConfigStore()
-  
+
   const handleMouseEnter = () => {
     invoke('window_show_drawer')
   }
-  
-  return (
-    <FloatingWindow 
-      onMouseEnter={handleMouseEnter}
-      config={config}
-      noteCount={notes.length}
-    />
-  )
+
+  return <FloatingWindow onMouseEnter={handleMouseEnter} config={config} noteCount={notes.length} />
 }
 
 // Drawer window component
 const DrawerWindowWrapper: React.FC = () => {
   const { notes, loadNotes } = useNotesStore()
-  
+
   useEffect(() => {
     loadNotes()
   }, [loadNotes])
-  
+
   const handleCopy = async (content: string) => {
     await invoke('clipboard_set_text', { content })
   }
-  
-  return (
-    <Drawer
-      notes={notes}
-      onCopy={handleCopy}
-      onRefresh={loadNotes}
-      config={null}
-    />
-  )
+
+  return <Drawer notes={notes} onCopy={handleCopy} onRefresh={loadNotes} config={null} />
 }
 
 // Popup window component
@@ -105,26 +89,26 @@ const PopupWindowWrapper: React.FC = () => {
   const { popupData, hidePopup } = usePopupStore()
   const { config } = useConfigStore()
   const { loadNotes } = useNotesStore()
-  
+
   const handleSave = async () => {
     if (popupData) {
       await invoke('notes_create', {
         content: popupData.content,
         noteType: popupData.type,
         tags: [],
-        sourceApp: popupData.sourceApp || ''
+        sourceApp: popupData.sourceApp || '',
       })
     }
     hidePopup()
     await loadNotes()
   }
-  
+
   const handleDismiss = async () => {
     hidePopup()
   }
-  
+
   if (!popupData) return null
-  
+
   return (
     <Popup
       content={popupData.content}
@@ -141,36 +125,36 @@ function App() {
   const windowType = getWindowType()
   const { loadConfig } = useConfigStore()
   const { showPopup, setPopupData } = usePopupStore()
-  
+
   useEffect(() => {
     // Apply transparent background for special windows
     applyTransparentBackground(windowType)
-    
+
     loadConfig()
     setupClipboardListener()
     setupThemeListener()
-    
+
     const unlistenClipboard = listen('clipboard-change', (event: TauriEvent) => {
       setPopupData(event.payload)
       showPopup()
     })
-    
+
     return () => {
       unlistenClipboard.then(f => f())
     }
   }, [loadConfig, setPopupData, showPopup, windowType])
-  
+
   // Render based on window type
   switch (windowType) {
     case 'floating':
       return <FloatingWindowWrapper />
-    
+
     case 'drawer':
       return <DrawerWindowWrapper />
-    
+
     case 'popup':
       return <PopupWindowWrapper />
-    
+
     case 'main':
     default:
       return <RouterProvider router={mainRouter} />
