@@ -46,10 +46,6 @@ export const EditorModal: React.FC<EditorModalProps> = ({
     const content = editorRef.current?.getHTML() || ''
     const textContent = editorRef.current?.getText() || ''
 
-    if (!textContent.trim()) {
-      return
-    }
-
     setIsSaving(true)
     await onSave(content, title)
     setIsSaving(false)
