@@ -66,6 +66,7 @@ pub async fn notes_update(
         title.as_deref(),
         note_type.as_deref(),
         tags,
+        use_count,
         is_favorite,
     ).map_err(|e| e.to_string())
 }

@@ -67,10 +67,15 @@ impl Database {
         )?;
         
         // Migration: Add title column if not exists (for existing databases)
-        conn.execute(
-            "ALTER TABLE notes ADD COLUMN IF NOT EXISTS title TEXT DEFAULT ''",
-            [],
-        )?;
+        // SQLite doesn't support IF NOT EXISTS in ALTER TABLE, so we check manually
+        let mut stmt = conn.prepare("PRAGMA table_info(notes)")?;
+        let columns: Vec<String> = stmt.column_names().iter().map(|s| s.to_string()).collect();
+        if !columns.contains(&"title".to_string()) {
+            conn.execute(
+                "ALTER TABLE notes ADD COLUMN title TEXT DEFAULT ''",
+                [],
+            )?;
+        }
         
         Ok(())
     }
@@ -190,7 +195,7 @@ impl Database {
         Ok(notes)
     }
 
-    pub fn update_note(&self, id: &str, content: Option<&str>, title: Option<&str>, note_type: Option<&str>, tags: Option<Vec<String>>, is_favorite: Option<bool>) -> Result<()> {
+    pub fn update_note(&self, id: &str, content: Option<&str>, title: Option<&str>, note_type: Option<&str>, tags: Option<Vec<String>>, use_count: Option<i32>, is_favorite: Option<bool>) -> Result<()> {
         let conn = self.conn.lock().unwrap();
         let now = Utc::now().timestamp();
 
@@ -226,6 +231,13 @@ impl Database {
             conn.execute(
                 "UPDATE notes SET tags = ?1, updated_at = ?2 WHERE id = ?3",
                 params![tags_json, now, id],
+            )?;
+        }
+
+        if let Some(uc) = use_count {
+            conn.execute(
+                "UPDATE notes SET use_count = ?1, updated_at = ?2 WHERE id = ?3",
+                params![uc, now, id],
             )?;
         }
 
