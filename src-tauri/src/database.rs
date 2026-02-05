@@ -238,22 +238,6 @@ impl Database {
 
         Ok(())
     }
-            let tags_json = serde_json::to_string(&tags_vec).unwrap_or_default();
-            conn.execute(
-                "UPDATE notes SET tags = ?1, updated_at = ?2 WHERE id = ?3",
-                params![tags_json, now, id],
-            )?;
-        }
-        
-        if let Some(f) = is_favorite {
-            conn.execute(
-                "UPDATE notes SET is_favorite = ?1, updated_at = ?2 WHERE id = ?3",
-                params![f as i32, now, id],
-            )?;
-        }
-        
-        Ok(())
-    }
 
     pub fn delete_note(&self, id: &str) -> Result<()> {
         let conn = self.conn.lock().unwrap();
