@@ -190,16 +190,54 @@ impl Database {
         Ok(notes)
     }
 
-    pub fn update_note(&self, id: &str, content: Option<&str>, note_type: Option<&str>, tags: Option<Vec<String>>, is_favorite: Option<bool>) -> Result<()> {
+    pub fn update_note(&self, id: &str, content: Option<&str>, title: Option<&str>, note_type: Option<&str>, tags: Option<Vec<String>>, is_favorite: Option<bool>) -> Result<()> {
         let conn = self.conn.lock().unwrap();
         let now = Utc::now().timestamp();
-        
+
+        // Always update the updated_at timestamp
+        conn.execute(
+            "UPDATE notes SET updated_at = ?1 WHERE id = ?2",
+            params![now, id],
+        )?;
+
         if let Some(c) = content {
             conn.execute(
                 "UPDATE notes SET content = ?1, updated_at = ?2 WHERE id = ?3",
                 params![c, now, id],
             )?;
         }
+
+        if let Some(t) = title {
+            conn.execute(
+                "UPDATE notes SET title = ?1, updated_at = ?2 WHERE id = ?3",
+                params![t, now, id],
+            )?;
+        }
+
+        if let Some(nt) = note_type {
+            conn.execute(
+                "UPDATE notes SET note_type = ?1, updated_at = ?2 WHERE id = ?3",
+                params![nt, now, id],
+            )?;
+        }
+
+        if let Some(tags_vec) = tags {
+            let tags_json = serde_json::to_string(&tags_vec).unwrap_or_default();
+            conn.execute(
+                "UPDATE notes SET tags = ?1, updated_at = ?2 WHERE id = ?3",
+                params![tags_json, now, id],
+            )?;
+        }
+
+        if let Some(f) = is_favorite {
+            conn.execute(
+                "UPDATE notes SET is_favorite = ?1, updated_at = ?2 WHERE id = ?3",
+                params![if f { 1i32 } else { 0 }, now, id],
+            )?;
+        }
+
+        Ok(())
+    }
         
         if let Some(t) = note_type {
             conn.execute(

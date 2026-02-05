@@ -32,6 +32,7 @@ pub async fn notes_create(
     note_type: String,
     tags: Vec<String>,
     source_app: String,
+    title: Option<String>,
 ) -> Result<String, String> {
     // Convert note_type string to ContentType
     let content_type = match note_type.as_str() {
@@ -43,7 +44,7 @@ pub async fn notes_create(
     };
     
     let tags_json = serde_json::to_string(&tags).unwrap_or_default();
-    let id = db.save_note(&content, content_type, &tags_json, &source_app)
+    let id = db.save_note(&content, content_type, &tags_json, &source_app, title.as_deref())
         .map_err(|e| e.to_string())?;
     Ok(id)
 }
@@ -53,12 +54,20 @@ pub async fn notes_update(
     db: State<'_, Arc<Database>>,
     id: String,
     content: Option<String>,
+    title: Option<String>,
     note_type: Option<String>,
     tags: Option<Vec<String>>,
+    use_count: Option<i32>,
     is_favorite: Option<bool>,
 ) -> Result<(), String> {
-    db.update_note(&id, content.as_deref(), note_type.as_deref(), tags, is_favorite)
-        .map_err(|e| e.to_string())
+    db.update_note(
+        &id,
+        content.as_deref(),
+        title.as_deref(),
+        note_type.as_deref(),
+        tags,
+        is_favorite,
+    ).map_err(|e| e.to_string())
 }
 
 #[command]
