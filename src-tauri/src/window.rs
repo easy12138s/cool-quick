@@ -89,7 +89,8 @@ pub fn show_popup_window(app: &AppHandle, content: &str, content_type: &str) {
     if let Some(window) = app.get_window("popup") {
         let popup_width = 360;
         let popup_height = 200;
-        let taskbar_height = 60; // 任务栏高度预留
+        let taskbar_height = 80; // 增加任务栏高度预留，确保不遮挡
+        let margin = 20; // 边距
         
         // Check if floating window is visible
         let floating_visible = app.get_window("floating")
@@ -116,8 +117,11 @@ pub fn show_popup_window(app: &AppHandle, content: &str, content_type: &str) {
                         (floating_pos.x - popup_width - 10, floating_pos.y)
                     };
                     
-                    let final_x = popup_x.max(screen_pos.x).min(screen_pos.x + screen_size.width as i32 - popup_width);
-                    let final_y = popup_y.max(screen_pos.y).min(screen_pos.y + screen_size.height as i32 - popup_height);
+                    let final_x = popup_x.max(screen_pos.x + margin)
+                        .min(screen_pos.x + screen_size.width as i32 - popup_width - margin);
+                    // 确保不超出屏幕底部（预留任务栏空间）
+                    let final_y = popup_y.max(screen_pos.y + margin)
+                        .min(screen_pos.y + screen_size.height as i32 - popup_height - taskbar_height);
                     
                     window.set_position(PhysicalPosition::new(final_x, final_y)).unwrap();
                 }
@@ -128,9 +132,10 @@ pub fn show_popup_window(app: &AppHandle, content: &str, content_type: &str) {
                 let screen_size = monitor.size();
                 let screen_pos = monitor.position();
                 
-                // Calculate position: bottom-right corner, above taskbar
-                let popup_x = screen_pos.x + screen_size.width as i32 - popup_width - 20;
-                let popup_y = screen_pos.y + screen_size.height as i32 - popup_height - taskbar_height - 10;
+                // Calculate position: bottom-right corner, safely above taskbar
+                let popup_x = screen_pos.x + screen_size.width as i32 - popup_width - margin;
+                // 确保弹窗底部不会覆盖任务栏，留出足够的安全距离
+                let popup_y = screen_pos.y + screen_size.height as i32 - popup_height - taskbar_height;
                 
                 window.set_position(PhysicalPosition::new(popup_x, popup_y)).unwrap();
             }
