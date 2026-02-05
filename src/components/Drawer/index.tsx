@@ -159,7 +159,7 @@ export const Drawer: React.FC<DrawerProps> = ({ notes, onRefresh }) => {
         await addNote({
           content,
           note_type: detectContentType(textContent),
-          title: title || '',
+          title: title || undefined,
           source_app: 'CoolQuick',
           is_favorite: false,
           tags: [],

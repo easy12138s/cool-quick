@@ -79,10 +79,11 @@ export const useNotesStore = create<NotesState>((set, get) => ({
         note_type: noteData.note_type,
         tags: noteData.tags,
         source_app: noteData.source_app || 'CoolQuick',
-        title: noteData.title || null,
+        title: noteData.title || undefined,
       })
       get().loadNotes()
     } catch (error) {
+      console.error('notes_create error:', error)
       set({ error: String(error) })
     }
   },
