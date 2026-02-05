@@ -197,6 +197,7 @@ impl BackupInfo {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::fs::File;
     use tempfile::TempDir;
 
     #[test]
