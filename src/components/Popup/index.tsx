@@ -232,11 +232,11 @@ export const Popup: React.FC<PopupProps> = ({
           </AnimatePresence>
         </div>
 
-        {/* Content - 可滚动区域 */}
-        <div className="p-4 flex-1 overflow-y-auto scrollbar-thin min-h-0">
-          <div className="relative bg-slate-50 dark:bg-slate-800/50 rounded-xl p-3.5 border border-slate-100 dark:border-slate-700/50 group">
+        {/* Content - 只有pre区域滚动 */}
+        <div className="p-4 flex-1 min-h-0 flex flex-col">
+          <div className="relative bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-100 dark:border-slate-700/50 group flex-1 overflow-hidden">
             <pre
-              className={`text-xs ${isPassword ? 'font-mono tracking-wider' : 'font-mono'} text-slate-800 dark:text-slate-200 break-all leading-relaxed whitespace-pre-wrap`}
+              className={`text-xs ${isPassword ? 'font-mono tracking-wider' : 'font-mono'} text-slate-800 dark:text-slate-200 break-all leading-relaxed whitespace-pre-wrap p-3.5 max-h-[120px] overflow-y-auto scrollbar-thin`}
             >
               {displayContent}
             </pre>

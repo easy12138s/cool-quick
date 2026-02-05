@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react'
 import { createHashRouter, RouterProvider } from 'react-router-dom'
-import { listen } from '@tauri-apps/api/event'
+import { listen, emit } from '@tauri-apps/api/event'
 import { invoke } from '@tauri-apps/api/tauri'
 import { MainLayout } from './components/layout/MainLayout'
 import { DashboardPage } from './pages/DashboardPage'
@@ -74,6 +74,15 @@ const DrawerWindowWrapper: React.FC = () => {
 
   useEffect(() => {
     loadNotes()
+
+    // 监听笔记更新事件
+    const unlisten = listen('notes-updated', () => {
+      loadNotes()
+    })
+
+    return () => {
+      unlisten.then(f => f())
+    }
   }, [loadNotes])
 
   return <Drawer notes={notes} onRefresh={loadNotes} />
@@ -96,6 +105,8 @@ const PopupWindowWrapper: React.FC = () => {
     }
     hidePopup()
     await loadNotes()
+    // 触发全局事件通知所有窗口刷新
+    await emit('notes-updated')
   }
 
   const handleDismiss = async () => {
