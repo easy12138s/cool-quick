@@ -1,4 +1,4 @@
-export { Popup } from './index'
+export { Popup } from './index.tsx'
 export { useCountdown } from './useCountdown'
 export { useClipboardCopy } from './useClipboardCopy'
 export {
