@@ -112,6 +112,12 @@ export const Popup: React.FC<PopupProps> = ({
         e.preventDefault()
         handleSave()
       }
+      // Ctrl+Enter 快速保存（不与其他冲突的快捷方式）
+      if (e.key === 'Enter' && (e.ctrlKey || e.metaKey) && !e.shiftKey) {
+        e.preventDefault()
+        e.stopPropagation()
+        handleSave()
+      }
       // Ctrl/Cmd + C 复制
       if (e.key === 'c' && (e.ctrlKey || e.metaKey)) {
         e.preventDefault()
@@ -145,7 +151,7 @@ export const Popup: React.FC<PopupProps> = ({
   return (
     <div className="w-full h-full flex items-center justify-center p-4 bg-transparent">
       <motion.div
-        className={`w-[340px] bg-white dark:bg-slate-900 rounded-2xl overflow-hidden shadow-2xl ${config.shadow} border border-slate-200/50 dark:border-slate-700/50`}
+        className={`w-[340px] max-h-[80vh] bg-white dark:bg-slate-900 rounded-2xl overflow-hidden shadow-2xl ${config.shadow} border border-slate-200/50 dark:border-slate-700/50 flex flex-col`}
         initial={{ opacity: 0, scale: 0.9, y: 20 }}
         animate={{
           opacity: isExiting ? 0 : 1,
@@ -158,7 +164,9 @@ export const Popup: React.FC<PopupProps> = ({
         onMouseLeave={() => setIsHovered(false)}
       >
         {/* Header */}
-        <div className={`relative px-4 py-3 bg-gradient-to-r ${config.gradient} text-white`}>
+        <div
+          className={`relative px-4 py-3 bg-gradient-to-r ${config.gradient} text-white flex-shrink-0`}
+        >
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2.5">
               <span className="text-xl">{config.icon}</span>
@@ -224,11 +232,11 @@ export const Popup: React.FC<PopupProps> = ({
           </AnimatePresence>
         </div>
 
-        {/* Content */}
-        <div className="p-4">
+        {/* Content - 可滚动区域 */}
+        <div className="p-4 flex-1 overflow-y-auto scrollbar-thin min-h-0">
           <div className="relative bg-slate-50 dark:bg-slate-800/50 rounded-xl p-3.5 border border-slate-100 dark:border-slate-700/50 group">
             <pre
-              className={`text-xs ${isPassword ? 'font-mono tracking-wider' : 'font-mono'} text-slate-800 dark:text-slate-200 break-all leading-relaxed whitespace-pre-wrap max-h-[100px] overflow-y-auto scrollbar-thin`}
+              className={`text-xs ${isPassword ? 'font-mono tracking-wider' : 'font-mono'} text-slate-800 dark:text-slate-200 break-all leading-relaxed whitespace-pre-wrap`}
             >
               {displayContent}
             </pre>
@@ -257,7 +265,7 @@ export const Popup: React.FC<PopupProps> = ({
           </div>
 
           {/* Actions */}
-          <div className="flex items-center justify-between mt-4">
+          <div className="flex items-center justify-between mt-4 flex-shrink-0">
             {/* Countdown */}
             <div className="flex items-center gap-2">
               <div className="relative w-7 h-7">
@@ -333,6 +341,10 @@ export const Popup: React.FC<PopupProps> = ({
             <span className="text-[9px] text-slate-400 flex items-center gap-1">
               <kbd className="px-1 py-0.5 bg-slate-100 dark:bg-slate-800 rounded text-slate-500 font-mono text-[8px]">
                 Enter
+              </kbd>
+              /
+              <kbd className="px-1 py-0.5 bg-slate-100 dark:bg-slate-800 rounded text-slate-500 font-mono text-[8px]">
+                Ctrl+Enter
               </kbd>
               保存
             </span>
