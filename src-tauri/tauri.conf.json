@@ -18,6 +18,9 @@
       },
       "globalShortcut": {
         "all": true
+      },
+      "dialog": {
+        "all": true
       }
     },
     "bundle": {
