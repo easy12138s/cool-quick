@@ -113,10 +113,11 @@ fn main() {
       std::thread::spawn(move || {
         std::thread::sleep(std::time::Duration::from_millis(100));
         if let Some(main_window) = app_handle_clone.get_window("main") {
+          let main_window_clone = main_window.clone();
           main_window.on_window_event(move |event| {
             if let tauri::WindowEvent::CloseRequested { api, .. } = event {
               api.prevent_close();
-              main_window.hide().unwrap();
+              main_window_clone.hide().unwrap();
             }
           });
         }
