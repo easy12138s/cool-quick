@@ -12,6 +12,7 @@ pub struct AppConfig {
   pub popup_auto_close_seconds: u64,
   pub floating_window_size: u32,
   pub floating_window_opacity: f32,
+  #[serde(default = "default_true")]
   pub floating_visible: bool,
   pub shortcut_search: String,
   pub shortcut_paste_last: String,
@@ -19,6 +20,10 @@ pub struct AppConfig {
   pub archive_after_days: i64,
   pub theme: String,
   pub language: String,
+}
+
+fn default_true() -> bool {
+  true
 }
 
 impl Default for AppConfig {
