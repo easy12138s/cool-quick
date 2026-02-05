@@ -238,15 +238,6 @@ impl Database {
 
         Ok(())
     }
-        
-        if let Some(t) = note_type {
-            conn.execute(
-                "UPDATE notes SET note_type = ?1, updated_at = ?2 WHERE id = ?3",
-                params![t, now, id],
-            )?;
-        }
-        
-        if let Some(tags_vec) = tags {
             let tags_json = serde_json::to_string(&tags_vec).unwrap_or_default();
             conn.execute(
                 "UPDATE notes SET tags = ?1, updated_at = ?2 WHERE id = ?3",
