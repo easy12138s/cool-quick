@@ -116,8 +116,13 @@ fn main() {
           floating_window.set_position(tauri::Position::Physical(tauri::PhysicalPosition { x, y })).unwrap();
         }
         
-        floating_window.show().unwrap();
-        floating_window.set_focus().unwrap();
+        // 根据配置显示或隐藏悬浮球
+        if config.floating_visible {
+          floating_window.show().unwrap();
+          floating_window.set_focus().unwrap();
+        } else {
+          floating_window.hide().unwrap();
+        }
       }
       
       // 监听主窗口关闭事件，关闭时隐藏窗口而非退出应用
