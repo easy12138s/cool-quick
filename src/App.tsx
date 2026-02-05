@@ -60,13 +60,12 @@ const mainRouter = createHashRouter([
 // Floating window component
 const FloatingWindowWrapper: React.FC = () => {
   const { notes } = useNotesStore()
-  const { config } = useConfigStore()
 
   const handleMouseEnter = () => {
     invoke('window_show_drawer')
   }
 
-  return <FloatingWindow onMouseEnter={handleMouseEnter} config={config} noteCount={notes.length} />
+  return <FloatingWindow onMouseEnter={handleMouseEnter} noteCount={notes.length} />
 }
 
 // Drawer window component
@@ -77,11 +76,7 @@ const DrawerWindowWrapper: React.FC = () => {
     loadNotes()
   }, [loadNotes])
 
-  const handleCopy = async (content: string) => {
-    await invoke('clipboard_set_text', { content })
-  }
-
-  return <Drawer notes={notes} onCopy={handleCopy} onRefresh={loadNotes} config={null} />
+  return <Drawer notes={notes} onRefresh={loadNotes} />
 }
 
 // Popup window component
