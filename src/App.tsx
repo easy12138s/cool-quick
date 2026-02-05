@@ -157,34 +157,7 @@ function App() {
 
     case 'main':
     default:
-      return (
-        <div
-          style={{
-            padding: '40px',
-            background: '#f0f0f0',
-            minHeight: '100vh',
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            justifyContent: 'center',
-            fontFamily: 'Arial, sans-serif',
-          }}
-        >
-          <h1 style={{ color: '#333', marginBottom: '20px' }}>CoolQuick - Main Window</h1>
-          <p style={{ color: '#666', fontSize: '18px' }}>Window Type: {windowType}</p>
-          <div
-            style={{
-              marginTop: '40px',
-              border: '2px solid #ccc',
-              padding: '20px',
-              borderRadius: '8px',
-              background: 'white',
-            }}
-          >
-            <RouterProvider router={mainRouter} />
-          </div>
-        </div>
-      )
+      return <RouterProvider router={mainRouter} />
   }
 }
 
