@@ -18,6 +18,9 @@
       },
       "globalShortcut": {
         "all": true
+      },
+      "systemTray": {
+        "all": true
       }
     },
     "bundle": {

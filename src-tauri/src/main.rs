@@ -102,30 +102,36 @@ commands::window::window_show_floating,
       commands::window::window_start_dragging,
       commands::window::window_is_visible,
     ])
-.setup(move |app| {
-    let app_handle = app.handle();
-    
-    // 延迟设置窗口关闭监听，确保窗口已完全创建
-    let app_handle_clone = app_handle.clone();
-    std::thread::spawn(move || {
-      std::thread::sleep(std::time::Duration::from_millis(100));
-      if let Some(main_window) = app_handle_clone.get_window("main") {
-        main_window.on_window_event(move |event| {
-          if let tauri::WindowEvent::CloseRequested { api, .. } = event {
-            api.prevent_close();
-            std::process::exit(0);
-          }
-        });
+    .setup(move |app| {
+      let app_handle = app.handle();
+      
+      // 显示悬浮球窗口
+      if let Some(floating_window) = app.get_window("floating") {
+        floating_window.show().unwrap();
+        floating_window.set_focus().unwrap();
       }
-    });
+      
+      // 监听主窗口关闭事件，关闭时隐藏窗口而非退出应用
+      let app_handle_clone = app_handle.clone();
+      std::thread::spawn(move || {
+        std::thread::sleep(std::time::Duration::from_millis(100));
+        if let Some(main_window) = app_handle_clone.get_window("main") {
+          main_window.on_window_event(move |event| {
+            if let tauri::WindowEvent::CloseRequested { api, .. } = event {
+              api.prevent_close();
+              main_window.hide().unwrap();
+            }
+          });
+        }
+      });
 
-    std::thread::spawn(move || {
-      let mut manager = ClipboardManager::new(db, config, app_handle);
-      manager.start_monitoring();
-    });
+      std::thread::spawn(move || {
+        let mut manager = ClipboardManager::new(db, config, app_handle);
+        manager.start_monitoring();
+      });
 
-    Ok(())
-  })
+      Ok(())
+    })
         .run(generate_context!())
         .expect("error while running tauri application");
 }
