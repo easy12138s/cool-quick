@@ -64,6 +64,14 @@ export const FloatingWindow: React.FC<FloatingWindowProps> = ({ onMouseEnter, no
     await invoke('window_show_main')
   }, [])
 
+  // 开始拖动
+  const handleMouseDown = useCallback(async (e: React.MouseEvent) => {
+    // 只有左键才触发拖动
+    if (e.button === 0) {
+      await invoke('window_start_dragging')
+    }
+  }, [])
+
   if (!isReady) return null
 
   return (
@@ -76,6 +84,7 @@ export const FloatingWindow: React.FC<FloatingWindowProps> = ({ onMouseEnter, no
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
       onClick={handleClick}
+      onMouseDown={handleMouseDown}
     >
       <motion.div
         className="relative"
