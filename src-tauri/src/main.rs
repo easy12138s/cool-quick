@@ -1,5 +1,5 @@
 use std::sync::Arc;
-use tauri::{generate_context, generate_handler, Builder, Manager, SystemTray, SystemTrayEvent, SystemTrayMenu, SystemTrayMenuItem};
+use tauri::{generate_context, generate_handler, Builder, Manager, SystemTray, SystemTrayEvent, SystemTrayMenu, CustomMenuItem};
 
 mod clipboard;
 mod commands;
@@ -24,19 +24,16 @@ fn main() {
 
   // 创建系统托盘菜单
   let tray_menu = SystemTrayMenu::new()
-    .add_item(SystemTrayMenuItem::new("打开主窗口", "show_main"))
-    .add_native_item(SystemTrayMenuItem::Separator)
-    .add_item(SystemTrayMenuItem::new("设置", "settings"))
-    .add_native_item(SystemTrayMenuItem::Separator)
-    .add_item(SystemTrayMenuItem::new("退出", "quit"));
-
-  let system_tray = SystemTray::new()
-    .with_menu(tray_menu);
+    .add_item(CustomMenuItem::new("show_main", "打开主窗口"))
+    .add_native_item(tauri::SystemTrayMenuItem::Separator)
+    .add_item(CustomMenuItem::new("settings", "设置"))
+    .add_native_item(tauri::SystemTrayMenuItem::Separator)
+    .add_item(CustomMenuItem::new("quit", "退出"));
 
   Builder::default()
     .manage(db.clone())
     .manage(config.clone())
-    .system_tray(system_tray)
+    .system_tray(SystemTray::new().with_menu(tray_menu))
     .on_system_tray_event(|app, event| {
       match event {
         SystemTrayEvent::MenuItemClick { id, .. } => {
@@ -71,25 +68,25 @@ fn main() {
       }
     })
     .invoke_handler(generate_handler![
-            commands::notes::notes_get_all,
-            commands::notes::notes_get_by_id,
-            commands::notes::notes_create,
-            commands::notes::notes_update,
-            commands::notes::notes_delete,
-            commands::notes::notes_search,
-            commands::notes::notes_get_archived,
-            commands::notes::notes_archive,
-            commands::notes::notes_unarchive,
-            commands::notes::notes_export,
-            commands::notes::notes_import,
-            commands::notes::notes_get_stats,
-            commands::config::config_get,
-            commands::config::config_update,
-            commands::config::config_reset,
-            commands::clipboard::clipboard_get_text,
-            commands::clipboard::clipboard_set_text,
-            commands::clipboard::clipboard_get_history,
-commands::window::window_show_floating,
+      commands::notes::notes_get_all,
+      commands::notes::notes_get_by_id,
+      commands::notes::notes_create,
+      commands::notes::notes_update,
+      commands::notes::notes_delete,
+      commands::notes::notes_search,
+      commands::notes::notes_get_archived,
+      commands::notes::notes_archive,
+      commands::notes::notes_unarchive,
+      commands::notes::notes_export,
+      commands::notes::notes_import,
+      commands::notes::notes_get_stats,
+      commands::config::config_get,
+      commands::config::config_update,
+      commands::config::config_reset,
+      commands::clipboard::clipboard_get_text,
+      commands::clipboard::clipboard_set_text,
+      commands::clipboard::clipboard_get_history,
+      commands::window::window_show_floating,
       commands::window::window_hide_floating,
       commands::window::window_toggle_floating,
       commands::window::window_show_drawer,
@@ -132,6 +129,6 @@ commands::window::window_show_floating,
 
       Ok(())
     })
-        .run(generate_context!())
-        .expect("error while running tauri application");
+    .run(generate_context!())
+    .expect("error while running tauri application");
 }
