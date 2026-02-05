@@ -1,5 +1,5 @@
 use std::sync::Arc;
-use tauri::{generate_context, generate_handler, Builder};
+use tauri::{generate_context, generate_handler, Builder, Manager};
 
 mod clipboard;
 mod commands;
