@@ -68,7 +68,7 @@ impl Database {
         
         // Migration: Add title column if not exists (for existing databases)
         // SQLite doesn't support IF NOT EXISTS in ALTER TABLE, so we check manually
-        let mut stmt = conn.prepare("PRAGMA table_info(notes)")?;
+        let stmt = conn.prepare("PRAGMA table_info(notes)")?;
         let columns: Vec<String> = stmt.column_names().iter().map(|s| s.to_string()).collect();
         if !columns.contains(&"title".to_string()) {
             conn.execute(
