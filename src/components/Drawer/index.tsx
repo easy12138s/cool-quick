@@ -51,7 +51,7 @@ export const Drawer: React.FC<DrawerProps> = ({ notes, onRefresh }) => {
 
   const { handleMouseEnter, handleMouseLeave, hideDrawer } = useDrawerAutoHide({
     enabled: true,
-    delay: 2000, // 2秒后自动隐藏
+    delay: 0, // 鼠标离开立即隐藏
   })
 
   const { toggleFavorite, deleteNote, exportNotes } = useNotesStore()

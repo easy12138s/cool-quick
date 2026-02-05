@@ -64,14 +64,6 @@ export const FloatingWindow: React.FC<FloatingWindowProps> = ({ onMouseEnter, no
     await invoke('window_show_main')
   }, [])
 
-  // 开始拖动
-  const handleMouseDown = useCallback(async (e: React.MouseEvent) => {
-    // 只有左键才触发拖动
-    if (e.button === 0) {
-      await invoke('window_start_dragging')
-    }
-  }, [])
-
   if (!isReady) return null
 
   return (
@@ -84,7 +76,6 @@ export const FloatingWindow: React.FC<FloatingWindowProps> = ({ onMouseEnter, no
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
       onClick={handleClick}
-      onMouseDown={handleMouseDown}
     >
       <motion.div
         className="relative"
@@ -92,15 +83,13 @@ export const FloatingWindow: React.FC<FloatingWindowProps> = ({ onMouseEnter, no
         animate={{ scale: isHovered ? 1.1 : 1 }}
         transition={{ type: 'spring', stiffness: 400, damping: 25 }}
       >
-        {/* 光晕效果 */}
+        {/* 光晕效果 - 悬停时不显示阴影 */}
         <motion.div
           className="absolute inset-0 rounded-full"
           animate={{
-            boxShadow: isHovered
-              ? '0 0 30px rgba(99, 102, 241, 0.6), 0 0 60px rgba(99, 102, 241, 0.3)'
-              : showPulse
-                ? '0 0 20px rgba(99, 102, 241, 0.5)'
-                : '0 4px 15px rgba(99, 102, 241, 0.4)',
+            boxShadow: showPulse
+              ? '0 0 20px rgba(99, 102, 241, 0.5)'
+              : '0 4px 15px rgba(99, 102, 241, 0.4)',
           }}
           transition={{ duration: 0.3 }}
         />

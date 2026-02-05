@@ -44,9 +44,14 @@ export const useDrawerAutoHide = ({
     isInteractingRef.current = false
     if (enabled) {
       resetTimer()
-      hideTimerRef.current = setTimeout(() => {
+      if (delay === 0) {
+        // 立即隐藏
         hideDrawer()
-      }, delay)
+      } else {
+        hideTimerRef.current = setTimeout(() => {
+          hideDrawer()
+        }, delay)
+      }
     }
   }, [enabled, delay, hideDrawer, resetTimer])
 
