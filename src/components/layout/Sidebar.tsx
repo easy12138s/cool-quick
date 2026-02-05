@@ -1,15 +1,15 @@
 import React from 'react'
 import { NavLink } from 'react-router-dom'
-import { 
-  LayoutDashboard, 
-  ClipboardList, 
-  Star, 
-  Archive, 
-  Search, 
+import {
+  LayoutDashboard,
+  ClipboardList,
+  Star,
+  Archive,
+  Search,
   Settings,
   BarChart3,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
 } from 'lucide-react'
 import { useState } from 'react'
 
@@ -27,8 +27,8 @@ export const Sidebar: React.FC = () => {
   const [collapsed, setCollapsed] = useState(false)
 
   return (
-    <aside 
-      className={`bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 flex flex-col transition-all duration-300 ${
+    <aside
+      className={`h-full bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 flex flex-col transition-all duration-300 overflow-hidden ${
         collapsed ? 'w-16' : 'w-64'
       }`}
     >
@@ -50,7 +50,7 @@ export const Sidebar: React.FC = () => {
       </div>
 
       <nav className="flex-1 p-2 space-y-1">
-        {menuItems.map((item) => (
+        {menuItems.map(item => (
           <NavLink
             key={item.path}
             to={item.path}
@@ -69,11 +69,7 @@ export const Sidebar: React.FC = () => {
       </nav>
 
       <div className="p-4 border-t border-gray-200 dark:border-gray-700">
-        {!collapsed && (
-          <div className="text-xs text-gray-500">
-            v1.0.0
-          </div>
-        )}
+        {!collapsed && <div className="text-xs text-gray-500">v1.0.0</div>}
       </div>
     </aside>
   )
