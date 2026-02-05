@@ -102,8 +102,20 @@ fn main() {
     .setup(move |app| {
       let app_handle = app.handle();
       
-      // 显示悬浮球窗口
+      // 设置悬浮球初始位置到屏幕右侧
       if let Some(floating_window) = app.get_window("floating") {
+        // 获取主显示器
+        if let Ok(Some(monitor)) = floating_window.primary_monitor() {
+          let screen_width = monitor.size().width as i32;
+          let screen_height = monitor.size().height as i32;
+          
+          // 计算右侧位置（距离右边缘 20px，垂直居中）
+          let x = screen_width - 56 - 20;
+          let y = (screen_height - 56) / 2;
+          
+          floating_window.set_position(tauri::Position::Physical(tauri::PhysicalPosition { x, y })).unwrap();
+        }
+        
         floating_window.show().unwrap();
         floating_window.set_focus().unwrap();
       }
