@@ -10,6 +10,7 @@ pub enum ContentType {
     Email,
     Url,
     Code,
+    Password,
     Text,
 }
 
@@ -20,6 +21,7 @@ impl ContentType {
             ContentType::Email => "email",
             ContentType::Url => "url",
             ContentType::Code => "code",
+            ContentType::Password => "password",
             ContentType::Text => "text",
         }.to_string()
     }
@@ -30,6 +32,7 @@ impl ContentType {
             ContentType::Email => "✉️",
             ContentType::Url => "🔗",
             ContentType::Code => "💻",
+            ContentType::Password => "🔒",
             ContentType::Text => "📝",
         }
     }
