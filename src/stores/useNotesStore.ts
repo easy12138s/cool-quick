@@ -75,11 +75,13 @@ export const useNotesStore = create<NotesState>((set, get) => ({
   addNote: async noteData => {
     try {
       const id = await invoke<string>('notes_create', {
-        content: noteData.content,
-        noteType: noteData.note_type,
-        tags: noteData.tags,
-        sourceApp: noteData.source_app || 'CoolQuick',
-        title: noteData.title || undefined,
+        request: {
+          content: noteData.content,
+          noteType: noteData.note_type,
+          tags: noteData.tags,
+          sourceApp: noteData.source_app || 'CoolQuick',
+          title: noteData.title || undefined,
+        },
       })
       console.log('Note created with ID:', id)
       await get().loadNotes()

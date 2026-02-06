@@ -193,11 +193,13 @@ export const NotesPage: React.FC = () => {
     }
 
     await invoke('notes_create', {
-      content,
-      noteType,
-      tags: [],
-      sourceApp: 'CoolQuick',
-      title: title || undefined,
+      request: {
+        content,
+        noteType,
+        tags: [],
+        sourceApp: 'CoolQuick',
+        title: title || undefined,
+      },
     })
 
     await loadNotes()

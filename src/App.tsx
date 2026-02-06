@@ -102,11 +102,13 @@ const PopupWindowWrapper: React.FC = () => {
     if (popupData) {
       try {
         const id = await invoke('notes_create', {
-          content: popupData.content,
-          noteType: popupData.type,
-          tags: [],
-          sourceApp: popupData.sourceApp || '',
-          title: undefined,
+          request: {
+            content: popupData.content,
+            noteType: popupData.type,
+            tags: [],
+            sourceApp: popupData.sourceApp || '',
+            title: undefined,
+          },
         })
         console.log('Note saved successfully, ID:', id)
       } catch (error) {
