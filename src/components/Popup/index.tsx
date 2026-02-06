@@ -320,9 +320,27 @@ export const Popup: React.FC<PopupProps> = ({
 
               {/* Save */}
               <button
-                onClick={() => {
-                  console.log('Save button clicked')
-                  handleSave()
+                onClick={async () => {
+                  console.log('=== SAVE BUTTON CLICKED ===')
+                  if (isSaving || isExiting) {
+                    console.log('Blocked: isSaving=', isSaving, 'isExiting=', isExiting)
+                    return
+                  }
+                  setIsSaving(true)
+                  pause()
+                  try {
+                    console.log('Calling onSave...')
+                    await onSave()
+                    console.log('onSave completed')
+                    setSaveSuccess(true)
+                    setTimeout(() => {
+                      handleDismiss()
+                    }, 800)
+                  } catch (error) {
+                    console.error('Save failed:', error)
+                    setIsSaving(false)
+                    resume()
+                  }
                 }}
                 disabled={isSaving || saveSuccess}
                 className={`flex items-center gap-1.5 px-4 py-1.5 text-xs font-semibold text-white rounded-lg transition-all ${
