@@ -70,7 +70,11 @@ export const Popup: React.FC<PopupProps> = ({
 
   // 处理保存
   const handleSave = useCallback(async () => {
-    if (isSaving || isExiting) return
+    console.log('Popup handleSave called')
+    if (isSaving || isExiting) {
+      console.log('Early return: isSaving=', isSaving, 'isExiting=', isExiting)
+      return
+    }
     setIsSaving(true)
     pause()
 
@@ -316,7 +320,10 @@ export const Popup: React.FC<PopupProps> = ({
 
               {/* Save */}
               <button
-                onClick={handleSave}
+                onClick={() => {
+                  console.log('Save button clicked')
+                  handleSave()
+                }}
                 disabled={isSaving || saveSuccess}
                 className={`flex items-center gap-1.5 px-4 py-1.5 text-xs font-semibold text-white rounded-lg transition-all ${
                   saveSuccess
