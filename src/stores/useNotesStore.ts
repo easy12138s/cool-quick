@@ -74,14 +74,16 @@ export const useNotesStore = create<NotesState>((set, get) => ({
 
   addNote: async noteData => {
     try {
-      await invoke('notes_create', {
+      const id = await invoke<string>('notes_create', {
         content: noteData.content,
         note_type: noteData.note_type,
         tags: noteData.tags,
         source_app: noteData.source_app || 'CoolQuick',
         title: noteData.title || undefined,
       })
-      get().loadNotes()
+      console.log('Note created with ID:', id)
+      await get().loadNotes()
+      console.log('Notes reloaded, count:', get().notes.length)
     } catch (error) {
       console.error('notes_create error:', error)
       set({ error: String(error) })
