@@ -29,9 +29,9 @@ pub async fn notes_get_by_id(
 pub async fn notes_create(
     db: State<'_, Arc<Database>>,
     content: String,
-    #[serde(rename = "note_type")] note_type: String,
+    note_type: String,
     tags: Vec<String>,
-    #[serde(rename = "source_app")] source_app: String,
+    source_app: String,
     title: Option<String>,
 ) -> Result<String, String> {
     // Convert note_type string to ContentType
