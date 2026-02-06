@@ -98,14 +98,20 @@ const PopupWindowWrapper: React.FC = () => {
   const { loadNotes } = useNotesStore()
 
   const handleSave = async () => {
+    console.log('handleSave called, popupData:', popupData)
     if (popupData) {
-      await invoke('notes_create', {
-        content: popupData.content,
-        note_type: popupData.type,
-        tags: [],
-        source_app: popupData.sourceApp || '',
-        title: undefined,
-      })
+      try {
+        const id = await invoke('notes_create', {
+          content: popupData.content,
+          note_type: popupData.type,
+          tags: [],
+          source_app: popupData.sourceApp || '',
+          title: undefined,
+        })
+        console.log('Note saved successfully, ID:', id)
+      } catch (error) {
+        console.error('Failed to save note:', error)
+      }
     }
     hidePopup()
     await loadNotes()
