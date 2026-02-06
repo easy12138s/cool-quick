@@ -26,14 +26,14 @@ pub async fn notes_get_by_id(
 }
 
 #[derive(serde::Deserialize)]
-struct CreateNoteRequest {
-    content: String,
+pub struct CreateNoteRequest {
+    pub content: String,
     #[serde(rename = "noteType")]
-    note_type: String,
-    tags: Vec<String>,
+    pub note_type: String,
+    pub tags: Vec<String>,
     #[serde(rename = "sourceApp")]
-    source_app: String,
-    title: Option<String>,
+    pub source_app: String,
+    pub title: Option<String>,
 }
 
 #[command]
