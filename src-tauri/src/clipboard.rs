@@ -80,9 +80,9 @@ impl ClipboardHandler for ClipboardHandlerImpl {
                     
                     // Check if should show popup
                     if self.should_show_popup(&content, &content_type) {
-                        // Emit event to frontend
+                        // Emit event to frontend with FULL content (not truncated)
                         self.app_handle.emit_all("clipboard-change", serde_json::json!({
-                            "content": &content[..content.chars().take(150).count().min(content.len())],
+                            "content": &content,
                             "type": content_type.to_string(),
                             "full_length": content.len(),
                         })).unwrap();
