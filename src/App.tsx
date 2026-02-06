@@ -101,9 +101,10 @@ const PopupWindowWrapper: React.FC = () => {
     if (popupData) {
       await invoke('notes_create', {
         content: popupData.content,
-        noteType: popupData.type,
+        note_type: popupData.type,
         tags: [],
-        sourceApp: popupData.sourceApp || '',
+        source_app: popupData.sourceApp || '',
+        title: undefined,
       })
     }
     hidePopup()
