@@ -29,13 +29,13 @@ pub async fn notes_get_by_id(
 pub async fn notes_create(
     db: State<'_, Arc<Database>>,
     content: String,
-    #[allow(non_snake_case)] noteType: String,
+    #[serde(rename = "note_type")] note_type: String,
     tags: Vec<String>,
-    sourceApp: String,
+    #[serde(rename = "source_app")] source_app: String,
     title: Option<String>,
 ) -> Result<String, String> {
     // Convert note_type string to ContentType
-    let content_type = match noteType.as_str() {
+    let content_type = match note_type.as_str() {
         "phone" => ContentType::Phone,
         "email" => ContentType::Email,
         "url" => ContentType::Url,
@@ -45,7 +45,7 @@ pub async fn notes_create(
     };
     
     let tags_json = serde_json::to_string(&tags).unwrap_or_default();
-    let id = db.save_note(&content, content_type, &tags_json, &sourceApp, title.as_deref())
+    let id = db.save_note(&content, content_type, &tags_json, &source_app, title.as_deref())
         .map_err(|e| e.to_string())?;
     Ok(id)
 }
