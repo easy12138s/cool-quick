@@ -3,14 +3,29 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { useNotesStore } from '../stores/useNotesStore'
 import type { Note } from '../types'
 import {
-  ClipboardList, Search, Filter, Star, Trash2, Archive,
-  ExternalLink, Copy, Clock, Tag, X,
-  ChevronLeft, ChevronRight, Download, Upload, Plus,
-  CheckCircle2, AlertCircle
+  ClipboardList,
+  Search,
+  Filter,
+  Star,
+  Trash2,
+  Archive,
+  ExternalLink,
+  Copy,
+  Clock,
+  Tag,
+  X,
+  ChevronLeft,
+  ChevronRight,
+  Download,
+  Upload,
+  Plus,
+  CheckCircle2,
+  AlertCircle,
 } from 'lucide-react'
 import { invoke } from '@tauri-apps/api/tauri'
 import { formatDistanceToNow, format } from 'date-fns'
 import { zhCN } from 'date-fns/locale'
+import { EditorModal } from '../components/Editor/EditorModal'
 
 const typeIcons: Record<string, string> = {
   phone: '📱',
@@ -40,15 +55,8 @@ const typeColors: Record<string, string> = {
 }
 
 export const NotesPage: React.FC = () => {
-  const { 
-    notes, 
-    loadNotes, 
-    deleteNote, 
-    archiveNote, 
-    toggleFavorite,
-    exportNotes,
-    importNotes
-  } = useNotesStore()
+  const { notes, loadNotes, deleteNote, archiveNote, toggleFavorite, exportNotes, importNotes } =
+    useNotesStore()
 
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedTypes, setSelectedTypes] = useState<string[]>([])
@@ -57,7 +65,11 @@ export const NotesPage: React.FC = () => {
   const [selectedNote, setSelectedNote] = useState<Note | null>(null)
   const [isDetailOpen, setIsDetailOpen] = useState(false)
   const [copiedId, setCopiedId] = useState<string | null>(null)
-  const [notification, setNotification] = useState<{ type: 'success' | 'error', message: string } | null>(null)
+  const [notification, setNotification] = useState<{
+    type: 'success' | 'error'
+    message: string
+  } | null>(null)
+  const [isEditorOpen, setIsEditorOpen] = useState(false)
 
   const itemsPerPage = 10
 
@@ -67,13 +79,14 @@ export const NotesPage: React.FC = () => {
 
   // Filter notes
   const filteredNotes = notes.filter(note => {
-    const matchesSearch = !searchQuery || 
+    const matchesSearch =
+      !searchQuery ||
       note.content.toLowerCase().includes(searchQuery.toLowerCase()) ||
       note.tags.some(tag => tag.toLowerCase().includes(searchQuery.toLowerCase()))
-    
+
     const matchesType = selectedTypes.length === 0 || selectedTypes.includes(note.note_type)
     const matchesFavorite = !showFavoritesOnly || note.is_favorite
-    
+
     return matchesSearch && matchesType && matchesFavorite
   })
 
@@ -153,26 +166,56 @@ export const NotesPage: React.FC = () => {
     setTimeout(() => setNotification(null), 3000)
   }
 
+  const handleCreateNote = () => {
+    setIsEditorOpen(true)
+  }
+
+  const handleSaveNote = async (content: string, title?: string) => {
+    // 从内容中提取纯文本作为类型检测
+    const tempDiv = document.createElement('div')
+    tempDiv.innerHTML = content
+    const textContent = tempDiv.textContent || tempDiv.innerText || ''
+
+    // 检测内容类型
+    let noteType = 'text'
+    if (/^1[3-9]\d{9}$/.test(textContent)) {
+      noteType = 'phone'
+    } else if (/^[\w.-]+@[\w.-]+\.\w+$/.test(textContent)) {
+      noteType = 'email'
+    } else if (/^https?:\/\//.test(textContent)) {
+      noteType = 'url'
+    } else if (
+      textContent.includes('{') ||
+      textContent.includes('}') ||
+      textContent.includes('function')
+    ) {
+      noteType = 'code'
+    }
+
+    await invoke('notes_create', {
+      content,
+      note_type: noteType,
+      tags: [],
+      source_app: 'CoolQuick',
+      title: title || undefined,
+    })
+
+    await loadNotes()
+    showNotification('success', '笔记创建成功')
+  }
+
   const openDetail = (note: Note) => {
     setSelectedNote(note)
     setIsDetailOpen(true)
   }
 
   const toggleTypeFilter = (type: string) => {
-    setSelectedTypes(prev => 
-      prev.includes(type) 
-        ? prev.filter(t => t !== type)
-        : [...prev, type]
-    )
+    setSelectedTypes(prev => (prev.includes(type) ? prev.filter(t => t !== type) : [...prev, type]))
     setCurrentPage(1)
   }
 
   return (
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      className="space-y-6"
-    >
+    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6">
       {/* Notification */}
       <AnimatePresence>
         {notification && (
@@ -184,7 +227,11 @@ export const NotesPage: React.FC = () => {
               notification.type === 'success' ? 'bg-green-500 text-white' : 'bg-red-500 text-white'
             }`}
           >
-            {notification.type === 'success' ? <CheckCircle2 size={18} /> : <AlertCircle size={18} />}
+            {notification.type === 'success' ? (
+              <CheckCircle2 size={18} />
+            ) : (
+              <AlertCircle size={18} />
+            )}
             {notification.message}
           </motion.div>
         )}
@@ -197,11 +244,9 @@ export const NotesPage: React.FC = () => {
             <ClipboardList size={28} className="text-indigo-600" />
             全部笔记
           </h1>
-          <p className="text-gray-500 dark:text-gray-400 mt-1">
-            共 {filteredNotes.length} 条笔记
-          </p>
+          <p className="text-gray-500 dark:text-gray-400 mt-1">共 {filteredNotes.length} 条笔记</p>
         </div>
-        
+
         <div className="flex gap-3">
           <input
             type="file"
@@ -217,14 +262,17 @@ export const NotesPage: React.FC = () => {
             <Upload size={18} />
             导入
           </label>
-          <button 
+          <button
             onClick={handleExport}
             className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 flex items-center gap-2"
           >
             <Download size={18} />
             导出
           </button>
-          <button className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 flex items-center gap-2">
+          <button
+            onClick={handleCreateNote}
+            className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 flex items-center gap-2"
+          >
             <Plus size={18} />
             新建笔记
           </button>
@@ -240,7 +288,7 @@ export const NotesPage: React.FC = () => {
             type="text"
             placeholder="搜索笔记内容或标签..."
             value={searchQuery}
-            onChange={(e) => {
+            onChange={e => {
               setSearchQuery(e.target.value)
               setCurrentPage(1)
             }}
@@ -254,12 +302,12 @@ export const NotesPage: React.FC = () => {
             <Filter size={14} />
             筛选:
           </span>
-          
+
           <button
             onClick={() => setShowFavoritesOnly(!showFavoritesOnly)}
             className={`px-3 py-1.5 rounded-full text-sm flex items-center gap-1.5 transition-colors ${
-              showFavoritesOnly 
-                ? 'bg-yellow-100 text-yellow-700 border border-yellow-200' 
+              showFavoritesOnly
+                ? 'bg-yellow-100 text-yellow-700 border border-yellow-200'
                 : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
             }`}
           >
@@ -320,24 +368,26 @@ export const NotesPage: React.FC = () => {
                 >
                   <div className="flex items-start gap-4">
                     {/* Type Icon */}
-                    <div className={`w-10 h-10 rounded-lg flex items-center justify-center text-lg border ${
-                      typeColors[note.note_type] || 'bg-gray-100 text-gray-700 border-gray-200'
-                    }`}>
+                    <div
+                      className={`w-10 h-10 rounded-lg flex items-center justify-center text-lg border ${
+                        typeColors[note.note_type] || 'bg-gray-100 text-gray-700 border-gray-200'
+                      }`}
+                    >
                       {typeIcons[note.note_type]}
                     </div>
 
                     {/* Content */}
                     <div className="flex-1 min-w-0">
                       <div className="flex items-start justify-between gap-2">
-                        <p 
+                        <p
                           className="text-gray-900 dark:text-gray-100 truncate cursor-pointer hover:text-indigo-600"
                           onClick={() => openDetail(note)}
                         >
-                          {note.content.length > 100 
-                            ? note.content.slice(0, 100) + '...' 
+                          {note.content.length > 100
+                            ? note.content.slice(0, 100) + '...'
                             : note.content}
                         </p>
-                        
+
                         <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                           <button
                             onClick={() => handleCopy(note)}
@@ -353,8 +403,8 @@ export const NotesPage: React.FC = () => {
                           <button
                             onClick={() => handleToggleFavorite(note.id, note.is_favorite)}
                             className={`p-2 rounded-lg transition-colors ${
-                              note.is_favorite 
-                                ? 'text-yellow-500 bg-yellow-50' 
+                              note.is_favorite
+                                ? 'text-yellow-500 bg-yellow-50'
                                 : 'text-gray-400 hover:text-yellow-500 hover:bg-yellow-50'
                             }`}
                             title={note.is_favorite ? '取消收藏' : '收藏'}
@@ -387,31 +437,32 @@ export const NotesPage: React.FC = () => {
 
                       {/* Meta */}
                       <div className="flex items-center gap-4 mt-2 text-sm text-gray-500">
-                        <span className={`px-2 py-0.5 rounded text-xs border ${
-                          typeColors[note.note_type] || 'bg-gray-100 text-gray-600 border-gray-200'
-                        }`}>
+                        <span
+                          className={`px-2 py-0.5 rounded text-xs border ${
+                            typeColors[note.note_type] ||
+                            'bg-gray-100 text-gray-600 border-gray-200'
+                          }`}
+                        >
                           {typeLabels[note.note_type] || note.note_type}
                         </span>
-                        
+
                         {note.tags.length > 0 && (
                           <span className="flex items-center gap-1">
                             <Tag size={12} />
                             {note.tags.join(', ')}
                           </span>
                         )}
-                        
+
                         <span className="flex items-center gap-1">
                           <Clock size={12} />
-                          {formatDistanceToNow(new Date(note.created_at * 1000), { 
-                            addSuffix: true, 
-                            locale: zhCN 
+                          {formatDistanceToNow(new Date(note.created_at * 1000), {
+                            addSuffix: true,
+                            locale: zhCN,
                           })}
                         </span>
-                        
+
                         {note.use_count > 0 && (
-                          <span className="text-indigo-600">
-                            使用 {note.use_count} 次
-                          </span>
+                          <span className="text-indigo-600">使用 {note.use_count} 次</span>
                         )}
                       </div>
                     </div>
@@ -462,16 +513,19 @@ export const NotesPage: React.FC = () => {
               initial={{ scale: 0.95, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.95, opacity: 0 }}
-              onClick={(e) => e.stopPropagation()}
+              onClick={e => e.stopPropagation()}
               className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl max-w-2xl w-full max-h-[80vh] overflow-hidden"
             >
               {/* Modal Header */}
               <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
                 <div className="flex items-center gap-3">
                   <span className="text-2xl">{typeIcons[selectedNote.note_type]}</span>
-                  <span className={`px-2 py-1 rounded text-sm border ${
-                    typeColors[selectedNote.note_type] || 'bg-gray-100 text-gray-700 border-gray-200'
-                  }`}>
+                  <span
+                    className={`px-2 py-1 rounded text-sm border ${
+                      typeColors[selectedNote.note_type] ||
+                      'bg-gray-100 text-gray-700 border-gray-200'
+                    }`}
+                  >
                     {typeLabels[selectedNote.note_type] || selectedNote.note_type}
                   </span>
                 </div>
@@ -494,11 +548,21 @@ export const NotesPage: React.FC = () => {
                 <div className="space-y-3 text-sm text-gray-500">
                   <div className="flex items-center gap-2">
                     <Clock size={16} />
-                    <span>创建时间: {format(new Date(selectedNote.created_at * 1000), 'yyyy-MM-dd HH:mm:ss', { locale: zhCN })}</span>
+                    <span>
+                      创建时间:{' '}
+                      {format(new Date(selectedNote.created_at * 1000), 'yyyy-MM-dd HH:mm:ss', {
+                        locale: zhCN,
+                      })}
+                    </span>
                   </div>
                   <div className="flex items-center gap-2">
                     <Clock size={16} />
-                    <span>更新时间: {format(new Date(selectedNote.updated_at * 1000), 'yyyy-MM-dd HH:mm:ss', { locale: zhCN })}</span>
+                    <span>
+                      更新时间:{' '}
+                      {format(new Date(selectedNote.updated_at * 1000), 'yyyy-MM-dd HH:mm:ss', {
+                        locale: zhCN,
+                      })}
+                    </span>
                   </div>
                   {selectedNote.source_app && (
                     <div className="flex items-center gap-2">
@@ -558,6 +622,14 @@ export const NotesPage: React.FC = () => {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Editor Modal */}
+      <EditorModal
+        isOpen={isEditorOpen}
+        onClose={() => setIsEditorOpen(false)}
+        onSave={handleSaveNote}
+        mode="create"
+      />
     </motion.div>
   )
 }
