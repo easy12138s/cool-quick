@@ -154,13 +154,8 @@ export const Drawer: React.FC<DrawerProps> = ({ notes, onRefresh }) => {
   const hasSelection = selectedIds.size > 0
 
   return (
-    <motion.div
+    <div
       className="w-full h-full bg-white dark:bg-slate-900 flex flex-col rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-700"
-      style={{ overflow: 'hidden' }}
-      initial={{ opacity: 0, x: 30, scale: 0.95 }}
-      animate={{ opacity: 1, x: 0, scale: 1 }}
-      exit={{ opacity: 0, x: 30, scale: 0.95 }}
-      transition={{ type: 'spring', damping: 25, stiffness: 300 }}
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
     >
@@ -270,10 +265,7 @@ export const Drawer: React.FC<DrawerProps> = ({ notes, onRefresh }) => {
       </div>
 
       {/* Notes List */}
-      <div 
-        className="flex-1 overflow-y-auto p-2 space-y-1.5 scrollbar-thin"
-        style={{ maxHeight: 'calc(100% - 140px)' }}
-      >
+      <div className="flex-1 overflow-y-auto p-2 space-y-1.5 scrollbar-thin">
         <AnimatePresence mode="popLayout">
           {filteredNotes.map((note, index) => (
             <NoteItem
@@ -306,7 +298,7 @@ export const Drawer: React.FC<DrawerProps> = ({ notes, onRefresh }) => {
       </div>
 
       {/* Footer */}
-      <div className="p-2 border-t border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 flex items-center justify-between">
+      <div className="p-2 border-t border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 flex items-center justify-between flex-shrink-0">
         <div className="flex items-center gap-1">
           <button
             onClick={handleRefresh}
@@ -331,6 +323,6 @@ export const Drawer: React.FC<DrawerProps> = ({ notes, onRefresh }) => {
           {filteredNotes.length} / {notes.length}
         </div>
       </div>
-    </motion.div>
+    </div>
   )
 }
