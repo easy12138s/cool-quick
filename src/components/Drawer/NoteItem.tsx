@@ -1,6 +1,5 @@
-import { forwardRef, useState, useRef, useEffect, useCallback, useMemo } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
-import { Star, Trash2, CheckCircle2, GripVertical } from 'lucide-react'
+import { forwardRef, useState, useRef, useEffect, useCallback } from 'react'
+import { Star, Trash2, CheckCircle2 } from 'lucide-react'
 import type { Note } from '../../stores/useNotesStore'
 
 interface NoteItemProps {
@@ -11,7 +10,6 @@ interface NoteItemProps {
   onDelete: (id: string) => void
   onToggleFavorite: (id: string, isFavorite: boolean) => void
   onSelect: (id: string) => void
-  onEdit?: (note: Note) => void
   index: number
 }
 
@@ -46,23 +44,22 @@ export const NoteItem = forwardRef<HTMLDivElement, NoteItemProps>(
     { note, isCopied, isSelected, onCopy, onDelete, onToggleFavorite, onSelect, onEdit, index },
     ref
   ) => {
-    const [isHovered, setIsHovered] = useState(false)
-    const [isDeleting, setIsDeleting] = useState(false)
-    const [showDelete, setShowDelete] = useState(false)
-    const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
-    const isLongPress = useRef(false)
+  const [isHovered, setIsHovered] = useState(false)
+  const [showDelete, setShowDelete] = useState(false)
+  const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const isLongPress = useRef(false)
 
-    const colors = useMemo(() => {
-      const map: Record<string, { bg: string; text: string; border: string }> = {
-        phone: { bg: 'bg-blue-50', text: 'text-blue-600', border: 'border-blue-200' },
-        email: { bg: 'bg-emerald-50', text: 'text-emerald-600', border: 'border-emerald-200' },
-        url: { bg: 'bg-violet-50', text: 'text-violet-600', border: 'border-violet-200' },
-        code: { bg: 'bg-amber-50', text: 'text-amber-600', border: 'border-amber-200' },
-        password: { bg: 'bg-rose-50', text: 'text-rose-600', border: 'border-rose-200' },
-        text: { bg: 'bg-slate-50', text: 'text-slate-600', border: 'border-slate-200' },
-      }
-      return map[note.note_type] || map.text
-    }, [note.note_type])
+  const colors = useMemo(() => {
+    const map: Record<string, { bg: string; text: string; border: string }> = {
+      phone: { bg: 'bg-blue-50', text: 'text-blue-600', border: 'border-blue-200' },
+      email: { bg: 'bg-emerald-50', text: 'text-emerald-600', border: 'border-emerald-200' },
+      url: { bg: 'bg-violet-50', text: 'text-violet-600', border: 'border-violet-200' },
+      code: { bg: 'bg-amber-50', text: 'text-amber-600', border: 'border-amber-200' },
+      password: { bg: 'bg-rose-50', text: 'text-rose-600', border: 'border-rose-200' },
+      text: { bg: 'bg-slate-50', text: 'text-slate-600', border: 'border-slate-200' },
+    }
+    return map[note.note_type] || map.text
+  }, [note.note_type])
 
     // 长按删除
     const handleMouseDown = useCallback(() => {
@@ -98,8 +95,7 @@ export const NoteItem = forwardRef<HTMLDivElement, NoteItemProps>(
     const handleDelete = useCallback(
       (e: React.MouseEvent) => {
         e.stopPropagation()
-        setIsDeleting(true)
-        setTimeout(() => onDelete(note.id), 200)
+        onDelete(note.id)
       },
       [note.id, onDelete]
     )
@@ -119,17 +115,8 @@ export const NoteItem = forwardRef<HTMLDivElement, NoteItemProps>(
     }, [])
 
     return (
-      <motion.div
+      <div
         ref={ref}
-        layout
-        initial={{ opacity: 0, y: 10 }}
-        animate={{
-          opacity: isDeleting ? 0 : 1,
-          y: isDeleting ? -10 : 0,
-          scale: isDeleting ? 0.9 : 1,
-        }}
-        exit={{ opacity: 0, x: -50 }}
-        transition={{ duration: 0.2, delay: index * 0.03 }}
         className={`relative group rounded-xl border bg-white transition-all ${
           isSelected ? 'border-primary ring-2 ring-primary/20' : colors.border
         } ${isHovered ? 'shadow-md' : 'shadow-sm'}`}
@@ -140,20 +127,15 @@ export const NoteItem = forwardRef<HTMLDivElement, NoteItemProps>(
         onClick={handleClick}
       >
         {/* 删除确认层 */}
-        <AnimatePresence>
-          {showDelete && (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="absolute inset-0 bg-rose-500 rounded-xl flex items-center justify-center gap-2 z-10 cursor-pointer"
-              onClick={handleDelete}
-            >
-              <Trash2 size={16} className="text-white" />
-              <span className="text-white text-sm font-medium">确认删除</span>
-            </motion.div>
-          )}
-        </AnimatePresence>
+        {showDelete && (
+          <div
+            className="absolute inset-0 bg-rose-500 rounded-xl flex items-center justify-center gap-2 z-10 cursor-pointer"
+            onClick={handleDelete}
+          >
+            <Trash2 size={16} className="text-white" />
+            <span className="text-white text-sm font-medium">确认删除</span>
+          </div>
+        )}
 
         <div className="p-3">
           <div className="flex items-start gap-3">
@@ -183,14 +165,10 @@ export const NoteItem = forwardRef<HTMLDivElement, NoteItemProps>(
                 {note.is_favorite && <Star size={10} className="text-amber-500 fill-amber-500" />}
 
                 {isCopied && (
-                  <motion.span
-                    initial={{ opacity: 0, scale: 0.8 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    className="text-[10px] text-emerald-600 flex items-center gap-0.5"
-                  >
+                  <span className="text-[10px] text-emerald-600 flex items-center gap-0.5">
                     <CheckCircle2 size={10} />
                     已复制
-                  </motion.span>
+                  </span>
                 )}
               </div>
             </div>
@@ -203,51 +181,37 @@ export const NoteItem = forwardRef<HTMLDivElement, NoteItemProps>(
             )}
 
             {/* 悬停操作 */}
-            <AnimatePresence>
-              {isHovered && !showDelete && (
-                <motion.div
-                  initial={{ opacity: 0, x: 10 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: 10 }}
-                  className="flex items-center gap-1"
+            {isHovered && !showDelete && (
+              <div className="flex items-center gap-1">
+                <button
+                  onClick={handleFavorite}
+                  className={`p-1.5 rounded-lg transition-colors ${
+                    note.is_favorite ? 'text-amber-500' : 'text-slate-300 hover:text-amber-500'
+                  }`}
                 >
-                  <button
-                    onClick={handleFavorite}
-                    className={`p-1.5 rounded-lg transition-colors ${
-                      note.is_favorite ? 'text-amber-500' : 'text-slate-300 hover:text-amber-500'
-                    }`}
-                  >
-                    <Star size={14} className={note.is_favorite ? 'fill-amber-500' : ''} />
-                  </button>
-                  <button
-                    onClick={e => {
-                      e.stopPropagation()
-                      setShowDelete(true)
-                    }}
-                    className="p-1.5 text-slate-300 hover:text-rose-500 rounded-lg transition-colors"
-                  >
-                    <Trash2 size={14} />
-                  </button>
-                </motion.div>
-              )}
-            </AnimatePresence>
+                  <Star size={14} className={note.is_favorite ? 'fill-amber-500' : ''} />
+                </button>
+                <button
+                  onClick={e => {
+                    e.stopPropagation()
+                    setShowDelete(true)
+                  }}
+                  className="p-1.5 text-slate-300 hover:text-rose-500 rounded-lg transition-colors"
+                >
+                  <Trash2 size={14} />
+                </button>
+              </div>
+            )}
           </div>
         </div>
 
         {/* 长按提示 */}
-        <AnimatePresence>
-          {isHovered && !showDelete && (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 0.5 }}
-              exit={{ opacity: 0 }}
-              className="absolute right-1 top-1/2 -translate-y-1/2 text-[8px] text-slate-400"
-            >
-              长按删除
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </motion.div>
+        {isHovered && !showDelete && (
+          <div className="absolute right-1 top-1/2 -translate-y-1/2 text-[8px] text-slate-400">
+            长按删除
+          </div>
+        )}
+      </div>
     )
   }
 )

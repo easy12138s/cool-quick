@@ -1,5 +1,5 @@
 import { useState, useCallback, useRef, useEffect } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
+import { motion } from 'framer-motion'
 import {
   Search,
   X,
@@ -266,34 +266,28 @@ export const Drawer: React.FC<DrawerProps> = ({ notes, onRefresh }) => {
 
       {/* Notes List */}
       <div className="flex-1 overflow-y-auto p-2 space-y-1.5 scrollbar-thin">
-        <AnimatePresence mode="popLayout">
-          {filteredNotes.map((note, index) => (
-            <NoteItem
-              key={note.id}
-              note={note}
-              isCopied={copiedId === note.id}
-              isSelected={selectedIds.has(note.id)}
-              onCopy={handleCopy}
-              onDelete={deleteNote}
-              onToggleFavorite={toggleFavorite}
-              onSelect={handleSelect}
-              index={index}
-            />
-          ))}
-        </AnimatePresence>
+        {filteredNotes.map((note, index) => (
+          <NoteItem
+            key={note.id}
+            note={note}
+            isCopied={copiedId === note.id}
+            isSelected={selectedIds.has(note.id)}
+            onCopy={handleCopy}
+            onDelete={deleteNote}
+            onToggleFavorite={toggleFavorite}
+            onSelect={handleSelect}
+            index={index}
+          />
+        ))}
 
         {filteredNotes.length === 0 && (
-          <motion.div
-            className="flex flex-col items-center justify-center h-32 text-slate-400"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-          >
+          <div className="flex flex-col items-center justify-center h-32 text-slate-400">
             <div className="w-12 h-12 rounded-xl bg-slate-100 flex items-center justify-center mb-2">
               <span className="text-2xl">📝</span>
             </div>
             <p className="text-sm">{searchQuery ? '未找到匹配的笔记' : '暂无笔记'}</p>
             <p className="text-xs text-slate-400 mt-1">复制内容会自动保存</p>
-          </motion.div>
+          </div>
         )}
       </div>
 
