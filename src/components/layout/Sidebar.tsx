@@ -5,7 +5,6 @@ import {
   ClipboardList,
   Star,
   Archive,
-  Search,
   Settings,
   BarChart3,
   ChevronLeft,
@@ -18,7 +17,6 @@ const menuItems = [
   { path: '/notes', label: '全部笔记', icon: ClipboardList },
   { path: '/favorites', label: '收藏夹', icon: Star },
   { path: '/archive', label: '归档箱', icon: Archive },
-  { path: '/search', label: '全局搜索', icon: Search },
   { path: '/statistics', label: '统计分析', icon: BarChart3 },
   { path: '/settings', label: '设置', icon: Settings },
 ]
