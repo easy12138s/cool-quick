@@ -1,7 +1,7 @@
 use std::sync::Arc;
 use std::thread;
 use std::time::Duration;
-use tauri::AppHandle;
+use tauri::{AppHandle, Manager};
 use crate::config::AppConfig;
 use crate::database::Database;
 
