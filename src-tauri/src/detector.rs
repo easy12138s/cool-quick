@@ -76,20 +76,11 @@ impl ContentDetector {
         );
 
         // Password patterns - 检测可能的密码内容
-        // 强密码：至少8位，包含大小写字母、数字和特殊字符
-        patterns.insert(
-            "password_strong".to_string(),
-            Regex::new(r"^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$").unwrap(),
-        );
-        // 中等密码：至少6位，包含两种字符类型
-        patterns.insert(
-            "password_medium".to_string(),
-            Regex::new(r"^(?=.*[a-zA-Z])(?=.*\d)[A-Za-z\d@$!%*?&]{6,}$").unwrap(),
-        );
+        // 只使用关键词匹配，复杂模式在 is_likely_password 函数中处理
         // 常见密码关键词
         patterns.insert(
             "password_keywords".to_string(),
-            Regex::new(r"\b(password|passwd|pwd|密钥|密码)\b[:\s]*").unwrap(),
+            Regex::new(r"(?i)\b(password|passwd|pwd|pass|密钥|密码)\b[:\s]*").unwrap(),
         );
         
         Self { patterns }
@@ -114,9 +105,8 @@ impl ContentDetector {
             return ContentType::Url;
         }
 
-        // Check password - 优先检测密码关键词
+        // Check password - 使用关键词匹配和启发式检测
         if self.patterns.get("password_keywords").unwrap().is_match(trimmed) ||
-           self.patterns.get("password_strong").unwrap().is_match(trimmed) ||
            self.is_likely_password(trimmed) {
             return ContentType::Password;
         }

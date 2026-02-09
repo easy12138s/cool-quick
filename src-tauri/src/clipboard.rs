@@ -67,23 +67,6 @@ impl ClipboardHandler for ClipboardHandlerImpl {
                     return CallbackResult::Next;
                 }
 
-                // 计算内容哈希用于去重
-                let content_hash = calculate_content_hash(&content);
-
-                // 持久化去重检查：检查数据库中是否已存在相同内容
-                let is_duplicate = match self.db.is_content_exists(&content_hash) {
-                    Ok(exists) => exists,
-                    Err(e) => {
-                        eprintln!("Failed to check content duplicate: {}", e);
-                        false
-                    }
-                };
-
-                if is_duplicate {
-                    // 内容已存在，跳过处理
-                    return CallbackResult::Next;
-                }
-
                 // 内存级去重检查（5秒内重复）
                 let should_process = {
                     let last = self.last_content.lock().unwrap();
@@ -107,7 +90,6 @@ impl ClipboardHandler for ClipboardHandlerImpl {
                             "content": &content,
                             "type": content_type.to_string(),
                             "full_length": content.len(),
-                            "content_hash": content_hash,
                         })).unwrap();
 
                         // Show popup window
@@ -136,27 +118,12 @@ impl ClipboardHandlerImpl {
             return true;
         }
 
-        // Check content type
-        matches!(content_type, ContentType::Phone | ContentType::Email | ContentType::Url | ContentType::Code)
+        // Check content type - 添加 Password 类型支持
+        matches!(content_type, ContentType::Phone | ContentType::Email | ContentType::Url | ContentType::Code | ContentType::Password)
     }
 }
 
 // Function to set the skip flag (called when copying from drawer)
 pub fn skip_next_clipboard_event() {
     SKIP_NEXT_EVENT.store(true, Ordering::SeqCst);
-}
-
-/// 计算内容哈希值（用于持久化去重）
-fn calculate_content_hash(content: &str) -> String {
-    use std::collections::hash_map::DefaultHasher;
-    use std::hash::{Hash, Hasher};
-    
-    // 标准化内容：去除首尾空白、统一换行符
-    let normalized = content.trim().replace("\r\n", "\n");
-    
-    let mut hasher = DefaultHasher::new();
-    normalized.hash(&mut hasher);
-    let hash_value = hasher.finish();
-    
-    format!("{:x}", hash_value)
 }
