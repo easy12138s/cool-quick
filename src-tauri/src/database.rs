@@ -151,7 +151,6 @@ impl Database {
             })
         })?.filter_map(|r| r.ok()).collect();
         
-        println!("[DEBUG] get_notes returned {} notes", notes.len());
         Ok(notes)
     }
 
@@ -560,23 +559,13 @@ impl Database {
         let id = Uuid::new_v4().to_string();
         let now = Utc::now().timestamp();
         
-        println!("[DEBUG] save_note_with_hash called: content_len={}, note_type={}, source_app={}", 
-            content.len(), note_type.to_string(), source_app);
-        
         let conn = self.conn.lock().unwrap();
-        match conn.execute(
+        conn.execute(
             "INSERT INTO notes (id, title, content, content_hash, note_type, tags, source_app, created_at, updated_at, is_favorite, is_archived, use_count)
              VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, 0, 0, 0)",
             params![&id, title.unwrap_or(""), content, content_hash, note_type.to_string(), tags, source_app, now, now],
-        ) {
-            Ok(rows_affected) => {
-                println!("[DEBUG] Note saved successfully: id={}, rows_affected={}", id, rows_affected);
-                Ok(id)
-            }
-            Err(e) => {
-                println!("[DEBUG] Failed to save note: {:?}", e);
-                Err(e)
-            }
-        }
+        )?;
+        
+        Ok(id)
     }
 }
