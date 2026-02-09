@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { Search, Bell, Moon, Sun, Monitor, Circle, CircleOff } from 'lucide-react'
+import { Search, Moon, Sun, Monitor, Circle, CircleOff } from 'lucide-react'
 import { useConfigStore } from '../../stores/useConfigStore'
 import { invoke } from '@tauri-apps/api/tauri'
 
@@ -81,11 +81,6 @@ export const Header: React.FC = () => {
         >
           {themeDisplay.icon}
           <span className="text-sm text-gray-600 dark:text-gray-300">{themeDisplay.label}</span>
-        </button>
-
-        <button className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg relative">
-          <Bell size={20} />
-          <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full" />
         </button>
       </div>
     </header>
