@@ -32,6 +32,7 @@ impl Database {
                 id TEXT PRIMARY KEY,
                 title TEXT DEFAULT '',
                 content TEXT NOT NULL,
+                content_hash TEXT,
                 note_type TEXT NOT NULL,
                 tags TEXT DEFAULT '[]',
                 source_app TEXT DEFAULT '',
@@ -46,6 +47,7 @@ impl Database {
             CREATE INDEX IF NOT EXISTS idx_notes_type ON notes(note_type);
             CREATE INDEX IF NOT EXISTS idx_notes_favorite ON notes(is_favorite);
             CREATE INDEX IF NOT EXISTS idx_notes_archived ON notes(is_archived);
+            CREATE INDEX IF NOT EXISTS idx_notes_hash ON notes(content_hash);
             
             CREATE TABLE IF NOT EXISTS custom_rules (
                 id TEXT PRIMARY KEY,
@@ -89,17 +91,16 @@ impl Database {
     }
 
     pub fn save_note(&self, content: &str, note_type: ContentType, tags: &str, source_app: &str, title: Option<&str>) -> Result<String> {
-        let id = Uuid::new_v4().to_string();
-        let now = Utc::now().timestamp();
+        // 计算内容哈希用于去重
+        use std::collections::hash_map::DefaultHasher;
+        use std::hash::{Hash, Hasher};
         
-        let conn = self.conn.lock().unwrap();
-        conn.execute(
-            "INSERT INTO notes (id, title, content, note_type, tags, source_app, created_at, updated_at, is_favorite, is_archived, use_count)
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, 0, 0, 0)",
-            params![&id, title.unwrap_or(""), content, note_type.to_string(), tags, source_app, now, now],
-        )?;
+        let normalized = content.trim().replace("\r\n", "\n");
+        let mut hasher = DefaultHasher::new();
+        normalized.hash(&mut hasher);
+        let content_hash = format!("{:x}", hasher.finish());
         
-        Ok(id)
+        self.save_note_with_hash(content, &content_hash, note_type, tags, source_app, title)
     }
 
     pub fn get_notes(&self, limit: i64, offset: i64, include_archived: bool) -> Result<Vec<Note>> {
@@ -461,5 +462,42 @@ impl Database {
         } else {
             Ok(None)
         }
+    }
+
+    /// 增加笔记使用计数
+    pub fn increment_use_count(&self, id: &str) -> Result<()> {
+        let conn = self.conn.lock().unwrap();
+        let now = Utc::now().timestamp();
+        conn.execute(
+            "UPDATE notes SET use_count = use_count + 1, updated_at = ?1 WHERE id = ?2",
+            params![now, id],
+        )?;
+        Ok(())
+    }
+
+    /// 根据内容哈希检查笔记是否已存在（用于去重）
+    pub fn is_content_exists(&self, content_hash: &str) -> Result<bool> {
+        let conn = self.conn.lock().unwrap();
+        let count: i64 = conn.query_row(
+            "SELECT COUNT(*) FROM notes WHERE content_hash = ?1 AND is_archived = 0",
+            params![content_hash],
+            |row| row.get(0),
+        )?;
+        Ok(count > 0)
+    }
+
+    /// 保存笔记时同时保存内容哈希
+    pub fn save_note_with_hash(&self, content: &str, content_hash: &str, note_type: crate::detector::ContentType, tags: &str, source_app: &str, title: Option<&str>) -> Result<String> {
+        let id = Uuid::new_v4().to_string();
+        let now = Utc::now().timestamp();
+        
+        let conn = self.conn.lock().unwrap();
+        conn.execute(
+            "INSERT INTO notes (id, title, content, content_hash, note_type, tags, source_app, created_at, updated_at, is_favorite, is_archived, use_count)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, 0, 0, 0)",
+            params![&id, title.unwrap_or(""), content, content_hash, note_type.to_string(), tags, source_app, now, now],
+        )?;
+        
+        Ok(id)
     }
 }

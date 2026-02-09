@@ -1,6 +1,7 @@
 use std::sync::Arc;
 use tauri::{generate_context, generate_handler, Builder, Manager, SystemTray, SystemTrayEvent, SystemTrayMenu, CustomMenuItem};
 
+mod archive_task;
 mod clipboard;
 mod commands;
 mod config;
@@ -8,6 +9,7 @@ mod database;
 mod detector;
 mod models;
 mod services;
+mod shortcut;
 mod window;
 
 use clipboard::ClipboardManager;
@@ -80,9 +82,12 @@ fn main() {
       commands::notes::notes_export,
       commands::notes::notes_import,
       commands::notes::notes_get_stats,
+      commands::notes::notes_trigger_archive,
       commands::config::config_get,
       commands::config::config_update,
       commands::config::config_reset,
+      commands::config::config_update_shortcuts,
+      commands::config::config_validate_shortcut,
       commands::clipboard::clipboard_get_text,
       commands::clipboard::clipboard_set_text,
       commands::clipboard::clipboard_get_history,
@@ -102,6 +107,14 @@ fn main() {
     .setup(move |app| {
       let app_handle = app.handle();
       
+      // 注册全局快捷键
+      if let Err(e) = shortcut::register_global_shortcuts(&app_handle, &config) {
+        eprintln!("Failed to register global shortcuts: {}", e);
+      }
+
+      // 启动自动归档任务
+      archive_task::start_auto_archive_task(app_handle.clone(), db.clone(), config.clone());
+
       // 设置悬浮球初始位置到屏幕右侧
       if let Some(floating_window) = app.get_window("floating") {
         // 获取主显示器

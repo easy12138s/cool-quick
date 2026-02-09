@@ -173,3 +173,20 @@ pub async fn notes_get_stats(
     
     Ok(serde_json::json!(stats))
 }
+
+/// 触发自动归档
+#[command]
+pub async fn notes_trigger_archive(
+    db: State<'_, Arc<Database>>,
+    days: i64,
+) -> Result<serde_json::Value, String> {
+    use crate::archive_task;
+    
+    let count = archive_task::trigger_archive(db.inner().clone(), days)
+        .map_err(|e| e.to_string())?;
+    
+    Ok(serde_json::json!({
+        "archived_count": count,
+        "days_threshold": days
+    }))
+}
