@@ -1,4 +1,4 @@
-import { forwardRef, useState, useRef, useEffect, useCallback } from 'react'
+import { forwardRef, useState, useRef, useEffect, useCallback, useMemo } from 'react'
 import { Star, Trash2, CheckCircle2 } from 'lucide-react'
 import type { Note } from '../../stores/useNotesStore'
 
