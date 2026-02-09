@@ -6,7 +6,7 @@ import {
   Clock, 
   TrendingUp
 } from 'lucide-react'
-import { listen } from '@tauri-apps/api'
+import { listen } from '@tauri-apps/api/event'
 import { useNotesStore } from '../stores/useNotesStore'
 import { StatCard } from '../components/dashboard/StatCard'
 import { TrendChart } from '../components/dashboard/TrendChart'
