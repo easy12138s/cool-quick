@@ -33,6 +33,14 @@ const typeLabels: Record<string, string> = {
   text: '文本',
 }
 
+// 提取纯文本内容（去除 HTML 标签）
+const stripHtml = (html: string): string => {
+  if (!html) return ''
+  const tmp = document.createElement('div')
+  tmp.innerHTML = html
+  return tmp.textContent || tmp.innerText || ''
+}
+
 export const NoteItem = forwardRef<HTMLDivElement, NoteItemProps>(
   (
     { note, isCopied, isSelected, onCopy, onDelete, onToggleFavorite, onSelect, onEdit, index },
@@ -159,8 +167,9 @@ export const NoteItem = forwardRef<HTMLDivElement, NoteItemProps>(
             {/* 内容区 */}
             <div className="flex-1 min-w-0">
               {/* 内容预览 */}
-              <p className="text-sm text-slate-800 line-clamp-2 font-mono leading-relaxed mb-1">
-                {note.content.length > 120 ? note.content.slice(0, 120) + '...' : note.content}
+              <p className="text-sm text-slate-800 line-clamp-2 leading-relaxed mb-1">
+                {stripHtml(note.content).slice(0, 120)}
+                {stripHtml(note.content).length > 120 ? '...' : ''}
               </p>
 
               {/* 元信息 */}

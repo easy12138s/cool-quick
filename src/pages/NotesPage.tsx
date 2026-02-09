@@ -54,6 +54,15 @@ const typeColors: Record<string, string> = {
   text: 'bg-gray-100 text-gray-700 border-gray-200',
 }
 
+// 提取纯文本内容（去除 HTML 标签）
+const stripHtml = (html: string): string => {
+  if (!html) return ''
+  // 创建一个临时的 div 来解析 HTML
+  const tmp = document.createElement('div')
+  tmp.innerHTML = html
+  return tmp.textContent || tmp.innerText || ''
+}
+
 export const NotesPage: React.FC = () => {
   const { notes, loadNotes, deleteNote, archiveNote, toggleFavorite, exportNotes, importNotes } =
     useNotesStore()
@@ -108,13 +117,11 @@ export const NotesPage: React.FC = () => {
   }
 
   const handleDelete = async (id: string) => {
-    if (confirm('确定要删除这条笔记吗？')) {
-      await deleteNote(id)
-      showNotification('success', '笔记已删除')
-      if (selectedNote?.id === id) {
-        setIsDetailOpen(false)
-        setSelectedNote(null)
-      }
+    await deleteNote(id)
+    showNotification('success', '笔记已删除')
+    if (selectedNote?.id === id) {
+      setIsDetailOpen(false)
+      setSelectedNote(null)
     }
   }
 
@@ -385,9 +392,8 @@ export const NotesPage: React.FC = () => {
                           className="text-gray-900 dark:text-gray-100 truncate cursor-pointer hover:text-indigo-600"
                           onClick={() => openDetail(note)}
                         >
-                          {note.content.length > 100
-                            ? note.content.slice(0, 100) + '...'
-                            : note.content}
+                          {stripHtml(note.content).slice(0, 100)}
+                          {stripHtml(note.content).length > 100 ? '...' : ''}
                         </p>
 
                         <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -542,9 +548,10 @@ export const NotesPage: React.FC = () => {
               {/* Modal Content */}
               <div className="p-6 overflow-y-auto max-h-[60vh]">
                 <div className="bg-gray-50 dark:bg-gray-900 rounded-lg p-4 mb-4">
-                  <pre className="text-gray-900 dark:text-gray-100 whitespace-pre-wrap break-all font-mono text-sm">
-                    {selectedNote.content}
-                  </pre>
+                  <div 
+                    className="text-gray-900 dark:text-gray-100 whitespace-pre-wrap break-all text-sm prose prose-sm max-w-none dark:prose-invert"
+                    dangerouslySetInnerHTML={{ __html: selectedNote.content }}
+                  />
                 </div>
 
                 <div className="space-y-3 text-sm text-gray-500">
