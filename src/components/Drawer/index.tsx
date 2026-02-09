@@ -28,7 +28,6 @@ const typeIcons: Record<string, string> = {
   email: '📧',
   url: '🔗',
   code: '💻',
-  password: '🔐',
   text: '📝',
 }
 
@@ -270,7 +269,10 @@ export const Drawer: React.FC<DrawerProps> = ({ notes, onRefresh }) => {
       </div>
 
       {/* Notes List */}
-      <div className="flex-1 overflow-y-auto p-2 space-y-1.5 scrollbar-thin">
+      <div 
+        className="flex-1 overflow-y-auto p-2 space-y-1.5 scrollbar-thin"
+        style={{ maxHeight: 'calc(100% - 140px)' }}
+      >
         <AnimatePresence mode="popLayout">
           {filteredNotes.map((note, index) => (
             <NoteItem

@@ -1,6 +1,6 @@
 import { forwardRef, useState, useRef, useEffect, useCallback, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Star, Trash2, CheckCircle2, GripVertical, Edit3 } from 'lucide-react'
+import { Star, Trash2, CheckCircle2, GripVertical } from 'lucide-react'
 import type { Note } from '../../stores/useNotesStore'
 
 interface NoteItemProps {
@@ -211,16 +211,6 @@ export const NoteItem = forwardRef<HTMLDivElement, NoteItemProps>(
                   exit={{ opacity: 0, x: 10 }}
                   className="flex items-center gap-1"
                 >
-                  <button
-                    onClick={e => {
-                      e.stopPropagation()
-                      onEdit?.(note)
-                    }}
-                    className="p-1.5 text-slate-300 hover:text-blue-500 rounded-lg transition-colors"
-                    title="编辑"
-                  >
-                    <Edit3 size={14} />
-                  </button>
                   <button
                     onClick={handleFavorite}
                     className={`p-1.5 rounded-lg transition-colors ${
