@@ -22,7 +22,8 @@ import {
   CheckCircle2,
   AlertCircle,
 } from 'lucide-react'
-import { invoke, listen } from '@tauri-apps/api/tauri'
+import { invoke } from '@tauri-apps/api/tauri'
+import { listen } from '@tauri-apps/api'
 import { formatDistanceToNow, format } from 'date-fns'
 import { zhCN } from 'date-fns/locale'
 import { EditorModal } from '../components/Editor/EditorModal'
