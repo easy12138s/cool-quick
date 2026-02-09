@@ -7,12 +7,6 @@ import { useNoteFilter } from './useNoteFilter'
 import { useDrawerAutoHide } from './useDrawerAutoHide'
 import { useNotesStore } from '../../stores/useNotesStore'
 import type { Note } from '../../stores/useNotesStore'
-import { invoke } from '@tauri-apps/api/tauri'
-import { NoteItem } from './NoteItem'
-import { useNoteFilter } from './useNoteFilter'
-import { useDrawerAutoHide } from './useDrawerAutoHide'
-import { useNotesStore } from '../../stores/useNotesStore'
-import type { Note } from '../../stores/useNotesStore'
 
 interface DrawerProps {
   notes: Note[]
