@@ -155,7 +155,8 @@ export const Drawer: React.FC<DrawerProps> = ({ notes, onRefresh }) => {
 
   return (
     <motion.div
-      className="w-full h-full bg-white dark:bg-slate-900 flex flex-col overflow-hidden rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-700"
+      className="w-full h-full bg-white dark:bg-slate-900 flex flex-col rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-700"
+      style={{ overflow: 'hidden' }}
       initial={{ opacity: 0, x: 30, scale: 0.95 }}
       animate={{ opacity: 1, x: 0, scale: 1 }}
       exit={{ opacity: 0, x: 30, scale: 0.95 }}
