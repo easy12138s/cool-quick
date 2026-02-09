@@ -30,7 +30,11 @@ export const EditorModal: React.FC<EditorModalProps> = ({
       setTitle(note.title || '')
       // 延迟设置内容，等待编辑器初始化
       setTimeout(() => {
-        editorRef.current?.setContent(note.content)
+        // 如果内容不包含 HTML 标签，需要包装在 <p> 标签中以便编辑器正确显示
+        const content = note.content || ''
+        const hasHtmlTags = /<[^>]+>/.test(content)
+        const editorContent = hasHtmlTags ? content : `<p>${content}</p>`
+        editorRef.current?.setContent(editorContent)
       }, 100)
     } else if (isOpen) {
       // 新建模式
@@ -46,8 +50,23 @@ export const EditorModal: React.FC<EditorModalProps> = ({
     const content = editorRef.current?.getHTML() || ''
     const textContent = editorRef.current?.getText() || ''
 
+    // 如果内容只是简单的 <p> 标签包裹的纯文本，则提取纯文本
+    // 这样可以避免为简单文本添加不必要的 HTML 标签
+    let finalContent = content
+    const trimmedContent = content.trim()
+    
+    // 检测是否是简单的 <p> 标签包裹的内容
+    // 匹配 <p>纯文本内容</p> 或 <p>纯文本内容<br></p> 格式
+    const simpleParagraphPattern = /^<p>([^<]+)(?:<br\s*\/?>)?<\/p>$/i
+    const match = trimmedContent.match(simpleParagraphPattern)
+    
+    if (match) {
+      // 只有简单段落，提取纯文本
+      finalContent = match[1].trim()
+    }
+
     setIsSaving(true)
-    await onSave(content, title)
+    await onSave(finalContent, title)
     setIsSaving(false)
     onClose()
   }
