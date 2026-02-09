@@ -171,7 +171,8 @@ export const Drawer: React.FC<DrawerProps> = ({ notes, onRefresh }) => {
                 删除
               </motion.button>
             )}
-      </div>
+          </div>
+        </div>
 
       {/* 类型筛选 */}
       <div className="flex items-center gap-1.5 mt-2 overflow-x-auto scrollbar-hide pb-1">

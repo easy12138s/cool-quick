@@ -22,7 +22,7 @@ import {
   CheckCircle2,
   AlertCircle,
 } from 'lucide-react'
-import { invoke } from '@tauri-apps/api/tauri'
+import { invoke, listen } from '@tauri-apps/api/tauri'
 import { formatDistanceToNow, format } from 'date-fns'
 import { zhCN } from 'date-fns/locale'
 import { EditorModal } from '../components/Editor/EditorModal'
@@ -84,6 +84,15 @@ export const NotesPage: React.FC = () => {
 
   useEffect(() => {
     loadNotes()
+
+    // 监听笔记更新事件，实时同步数据
+    const unlisten = listen('notes-updated', () => {
+      loadNotes()
+    })
+
+    return () => {
+      unlisten.then(f => f())
+    }
   }, [loadNotes])
 
   // Filter notes
@@ -548,8 +557,8 @@ export const NotesPage: React.FC = () => {
               {/* Modal Content */}
               <div className="p-6 overflow-y-auto max-h-[60vh]">
                 <div className="bg-gray-50 dark:bg-gray-900 rounded-lg p-4 mb-4">
-                  <div 
-                    className="text-gray-900 dark:text-gray-100 whitespace-pre-wrap break-all text-sm prose prose-sm max-w-none dark:prose-invert"
+                  <div
+                    className="text-gray-900 dark:text-gray-100 whitespace-pre-wrap break-all text-sm prose prose-sm max-w-none dark:prose-invert select-text cursor-text"
                     dangerouslySetInnerHTML={{ __html: selectedNote.content }}
                   />
                 </div>
