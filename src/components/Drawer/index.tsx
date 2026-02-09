@@ -142,9 +142,9 @@ export const Drawer: React.FC<DrawerProps> = ({ notes, onRefresh }) => {
       onMouseLeave={handleMouseLeave}
     >
       {/* Header */}
-      <div className="flex-shrink-0 p-3 border-b border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900">
+      <div className="flex-shrink-0 p-3 border-b border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 space-y-3">
         {/* 搜索栏 */}
-        <div className="relative mb-3">
+        <div className="relative mb-0">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
           <input
             ref={searchInputRef}

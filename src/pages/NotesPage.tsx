@@ -383,7 +383,7 @@ export const NotesPage: React.FC = () => {
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: index * 0.05 }}
-                  className="p-5 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors group"
+                  className="p-5 sm:p-6 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors group"
                 >
                   <div className="flex items-start gap-4">
                     {/* Type Icon */}

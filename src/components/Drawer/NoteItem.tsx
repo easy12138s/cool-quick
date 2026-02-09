@@ -132,7 +132,7 @@ export const NoteItem = forwardRef<HTMLDivElement, NoteItemProps>(
           </div>
         )}
 
-        <div className="p-3">
+        <div className="p-4">
           <div className="flex items-start gap-3">
             <div
               className={`flex-shrink-0 w-9 h-9 rounded-lg ${colors.bg} ${colors.text} flex items-center justify-center text-base border ${colors.border}`}
