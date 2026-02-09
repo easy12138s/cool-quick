@@ -73,9 +73,6 @@ const DrawerWindowWrapper: React.FC = () => {
   const { notes, loadNotes } = useNotesStore()
 
   useEffect(() => {
-    // 防止抽屉窗口整体滚动，只允许内部区域滚动
-    document.body.style.overflow = 'hidden'
-
     loadNotes()
 
     // 监听笔记更新事件
