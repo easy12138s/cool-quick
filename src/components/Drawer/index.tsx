@@ -1,5 +1,12 @@
 import { useState, useCallback, useRef, useEffect } from 'react'
+import { listen } from '@tauri-apps/api/event'
+import { invoke } from '@tauri-apps/api/tauri'
 import { Search, X, CheckSquare, Square, Trash2 } from 'lucide-react'
+import { NoteItem } from './NoteItem'
+import { useNoteFilter } from './useNoteFilter'
+import { useDrawerAutoHide } from './useDrawerAutoHide'
+import { useNotesStore } from '../../stores/useNotesStore'
+import type { Note } from '../../stores/useNotesStore'
 import { invoke } from '@tauri-apps/api/tauri'
 import { NoteItem } from './NoteItem'
 import { useNoteFilter } from './useNoteFilter'
@@ -40,6 +47,22 @@ export const Drawer: React.FC<DrawerProps> = ({ notes, onRefresh }) => {
   })
 
   const { toggleFavorite, deleteNote } = useNotesStore()
+
+  // 监听抽屉显示事件，重置状态
+  useEffect(() => {
+    const unlisten = listen('window-shown', (event) => {
+      if ('drawer' in event.payload && (event.payload as any).drawer === true) {
+        // 重置状态
+        setSelectedIds(new Set())
+        setSearchQuery('')
+        setSelectedType(null)
+      }
+    })
+
+    return () => {
+      unlisten.then(f => f())
+    }
+  }, [])
 
   // 处理复制
   const handleCopy = useCallback(

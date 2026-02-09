@@ -26,6 +26,10 @@ pub fn hide_floating_window(app: &AppHandle) {
 
 pub fn show_drawer_window(app: &AppHandle) {
     if let Some(window) = app.get_window("drawer") {
+        // 发送事件通知前端重置状态
+        let _ = app.emit_all("window-shown", serde_json::json!({
+            "window": "drawer"
+        }));
         window.show().unwrap();
     }
 }
