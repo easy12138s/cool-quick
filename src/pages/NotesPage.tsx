@@ -376,7 +376,7 @@ export const NotesPage: React.FC = () => {
           </div>
         ) : (
           <>
-            <div className="divide-y divide-gray-100 dark:divide-gray-700">
+            <div className="space-y-2 p-4">
               {paginatedNotes.map((note, index) => (
                 <motion.div
                   key={note.id}

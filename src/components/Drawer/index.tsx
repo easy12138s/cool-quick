@@ -137,14 +137,14 @@ export const Drawer: React.FC<DrawerProps> = ({ notes, onRefresh }) => {
 
   return (
     <div
-      className="w-full h-full bg-white dark:bg-slate-900 flex flex-col rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-700 overflow-hidden"
+      className="w-full h-full bg-white dark:bg-slate-900 flex flex-col rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-700"
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
     >
       {/* Header */}
       <div className="flex-shrink-0 p-3 border-b border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 space-y-3">
         {/* 搜索栏 */}
-        <div className="relative mb-0">
+        <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
           <input
             ref={searchInputRef}
@@ -222,6 +222,7 @@ export const Drawer: React.FC<DrawerProps> = ({ notes, onRefresh }) => {
 
     {/* Notes List */}
     <div className="flex-1 overflow-y-auto scrollbar-thin">
+      <div className="space-y-2 p-3">
         {filteredNotes.map((note, index) => (
           <NoteItem
             key={note.id}
@@ -246,6 +247,7 @@ export const Drawer: React.FC<DrawerProps> = ({ notes, onRefresh }) => {
           </div>
         )}
       </div>
+    </div>
 
       {/* Footer */}
       <div className="flex-shrink-0 px-3 py-2 border-t border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800">
