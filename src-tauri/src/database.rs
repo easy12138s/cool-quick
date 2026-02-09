@@ -126,13 +126,15 @@ impl Database {
             "SELECT * FROM notes WHERE is_archived = 0 ORDER BY created_at DESC LIMIT ?1 OFFSET ?2"
         };
         
+        println!("[DEBUG] get_notes called: limit={}, offset={}, include_archived={}", limit, offset, include_archived);
+        
         let mut stmt = conn.prepare(sql)?;
-        let notes = stmt.query_map(params![limit, offset], |row| {
-            Ok(Note {
+        let notes: Vec<Note> = stmt.query_map(params![limit, offset], |row| {
+            let note = Note {
                 id: row.get(0)?,
                 title: row.get(1)?,
                 content: row.get(2)?,
-                // 跳过 content_hash (索引 3)，不映射到 Note 结构体
+                // 跳过 content_hash (索引 3)
                 note_type: row.get(4)?,
                 tags: serde_json::from_str(&row.get::<_, String>(5)?).unwrap_or_default(),
                 source_app: row.get(6)?,
@@ -141,10 +143,13 @@ impl Database {
                 is_favorite: row.get::<_, i32>(9)? != 0,
                 is_archived: row.get::<_, i32>(10)? != 0,
                 use_count: row.get(11)?,
-            })
-        })?;
-
-        notes.collect::<Result<Vec<_>>>()
+            };
+            println!("[DEBUG] Loaded note: id={}, type={}, content_len={}", note.id, note.note_type, note.content.len());
+            Ok(note)
+        })?.filter_map(|r| r.ok()).collect();
+        
+        println!("[DEBUG] get_notes returned {} notes", notes.len());
+        Ok(notes)
     }
 
     pub fn get_note_by_id(&self, id: &str) -> Result<Option<Note>> {
@@ -380,13 +385,23 @@ impl Database {
     pub fn import_note(&self, note: &Note) -> Result<()> {
         let conn = self.conn.lock().unwrap();
         let tags_json = serde_json::to_string(&note.tags).unwrap_or_default();
+        
+        // 计算内容哈希
+        use std::collections::hash_map::DefaultHasher;
+        use std::hash::{Hash, Hasher};
+        let normalized = note.content.trim().replace("\r\n", "\n");
+        let mut hasher = DefaultHasher::new();
+        normalized.hash(&mut hasher);
+        let content_hash = format!("{:x}", hasher.finish());
+        
         conn.execute(
-            "INSERT OR REPLACE INTO notes (id, title, content, note_type, tags, source_app, created_at, updated_at, is_favorite, is_archived, use_count)
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11)",
+            "INSERT OR REPLACE INTO notes (id, title, content, content_hash, note_type, tags, source_app, created_at, updated_at, is_favorite, is_archived, use_count)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12)",
             params![
                 &note.id,
                 &note.title,
                 &note.content,
+                content_hash,
                 &note.note_type,
                 tags_json,
                 &note.source_app,
@@ -512,13 +527,23 @@ impl Database {
         let id = Uuid::new_v4().to_string();
         let now = Utc::now().timestamp();
         
+        println!("[DEBUG] save_note_with_hash called: content_len={}, note_type={}, source_app={}", 
+            content.len(), note_type.to_string(), source_app);
+        
         let conn = self.conn.lock().unwrap();
-        conn.execute(
+        match conn.execute(
             "INSERT INTO notes (id, title, content, content_hash, note_type, tags, source_app, created_at, updated_at, is_favorite, is_archived, use_count)
              VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, 0, 0, 0)",
             params![&id, title.unwrap_or(""), content, content_hash, note_type.to_string(), tags, source_app, now, now],
-        )?;
-        
-        Ok(id)
+        ) {
+            Ok(rows_affected) => {
+                println!("[DEBUG] Note saved successfully: id={}, rows_affected={}", id, rows_affected);
+                Ok(id)
+            }
+            Err(e) => {
+                println!("[DEBUG] Failed to save note: {:?}", e);
+                Err(e)
+            }
+        }
     }
 }

@@ -41,6 +41,9 @@ pub async fn notes_create(
     db: State<'_, Arc<Database>>,
     request: CreateNoteRequest,
 ) -> Result<String, String> {
+    println!("[DEBUG] notes_create called: content_len={}, note_type={}, source_app={}", 
+        request.content.len(), request.note_type, request.source_app);
+    
     // Convert note_type string to ContentType
     let content_type = match request.note_type.as_str() {
         "phone" => ContentType::Phone,
@@ -52,8 +55,15 @@ pub async fn notes_create(
     };
     
     let tags_json = serde_json::to_string(&request.tags).unwrap_or_default();
+    println!("[DEBUG] Calling save_note with tags: {}", tags_json);
+    
     let id = db.save_note(&request.content, content_type, &tags_json, &request.source_app, request.title.as_deref())
-        .map_err(|e| e.to_string())?;
+        .map_err(|e| {
+            println!("[DEBUG] save_note failed: {:?}", e);
+            e.to_string()
+        })?;
+    
+    println!("[DEBUG] Note created successfully: id={}", id);
     Ok(id)
 }
 
