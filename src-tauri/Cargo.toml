@@ -4,7 +4,7 @@ version = "0.1.0"
 description = "A smart clipboard manager with quick note-taking capabilities"
 authors = ["CoolQuick Team"]
 license = "MIT"
-repository = "https://github.com/coolquick/coolquick"
+repository = "https://github.com/easy12138s/cool-quick"
 edition = "2021"
 rust-version = "1.70"
 
