@@ -130,23 +130,52 @@ impl Database {
         
         let mut stmt = conn.prepare(sql)?;
         let notes: Vec<Note> = stmt.query_map(params![limit, offset], |row| {
-            let note = Note {
-                id: row.get(0)?,
-                title: row.get(1)?,
-                content: row.get(2)?,
-                // 跳过 content_hash (索引 3)
-                note_type: row.get(4)?,
-                tags: serde_json::from_str(&row.get::<_, String>(5)?).unwrap_or_default(),
-                source_app: row.get(6)?,
-                created_at: row.get(7)?,
-                updated_at: row.get(8)?,
-                is_favorite: row.get::<_, i32>(9)? != 0,
-                is_archived: row.get::<_, i32>(10)? != 0,
-                use_count: row.get(11)?,
+            let id: String = row.get(0)?;
+            println!("[DEBUG] Loading note id={}", id);
+            
+            let title: String = row.get(1)?;
+            let content: String = row.get(2)?;
+            let _content_hash: String = row.get(3)?; // 跳过但读取验证
+            let note_type: String = row.get(4)?;
+            let tags_str: String = row.get(5)?;
+            let source_app: String = row.get(6)?;
+            let created_at: i64 = row.get(7)?;
+            let updated_at: i64 = row.get(8)?;
+            let is_favorite: i32 = row.get(9)?;
+            let is_archived: i32 = row.get(10)?;
+            let use_count: i32 = row.get(11)?;
+            
+            println!("[DEBUG] Raw data: type={}, tags_str='{}', is_archived={}", note_type, tags_str, is_archived);
+            
+            let tags: Vec<String> = if tags_str.is_empty() || tags_str == "null" {
+                vec![]
+            } else {
+                serde_json::from_str(&tags_str).unwrap_or_default()
             };
-            println!("[DEBUG] Loaded note: id={}, type={}, content_len={}", note.id, note.note_type, note.content.len());
+            
+            let note = Note {
+                id,
+                title,
+                content,
+                note_type,
+                tags,
+                source_app,
+                created_at,
+                updated_at,
+                is_favorite: is_favorite != 0,
+                is_archived: is_archived != 0,
+                use_count,
+            };
+            
+            println!("[DEBUG] Loaded note: id={}, type={}, is_archived={}", note.id, note.note_type, note.is_archived);
             Ok(note)
-        })?.filter_map(|r| r.ok()).collect();
+        })?.filter_map(|r| match r {
+            Ok(note) => Some(note),
+            Err(e) => {
+                println!("[DEBUG] Failed to load note: {:?}", e);
+                None
+            }
+        }).collect();
         
         println!("[DEBUG] get_notes returned {} notes", notes.len());
         Ok(notes)
