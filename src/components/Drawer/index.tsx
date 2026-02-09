@@ -1,16 +1,5 @@
 import { useState, useCallback, useRef, useEffect } from 'react'
-import { motion } from 'framer-motion'
-import {
-  Search,
-  X,
-  Download,
-  ExternalLink,
-  Trash2,
-  CheckSquare,
-  Square,
-  Clock,
-  ArrowUpDown,
-} from 'lucide-react'
+import { Search, X, CheckSquare, Square, Trash2 } from 'lucide-react'
 import { invoke } from '@tauri-apps/api/tauri'
 import { NoteItem } from './NoteItem'
 import { useNoteFilter } from './useNoteFilter'
@@ -34,7 +23,6 @@ const typeIcons: Record<string, string> = {
 export const Drawer: React.FC<DrawerProps> = ({ notes, onRefresh }) => {
   const [copiedId, setCopiedId] = useState<string | null>(null)
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
-  const [isRefreshing, setIsRefreshing] = useState(false)
   const searchInputRef = useRef<HTMLInputElement>(null)
 
   const {
@@ -43,17 +31,15 @@ export const Drawer: React.FC<DrawerProps> = ({ notes, onRefresh }) => {
     setSearchQuery,
     selectedType,
     setSelectedType,
-    sortMode,
-    setSortMode,
     uniqueTypes,
   } = useNoteFilter({ notes })
 
   const { handleMouseEnter, handleMouseLeave, hideDrawer } = useDrawerAutoHide({
     enabled: true,
-    delay: 0, // 鼠标离开立即隐藏
+    delay: 0,
   })
 
-  const { toggleFavorite, deleteNote, exportNotes } = useNotesStore()
+  const { toggleFavorite, deleteNote } = useNotesStore()
 
   // 处理复制
   const handleCopy = useCallback(
@@ -105,27 +91,6 @@ export const Drawer: React.FC<DrawerProps> = ({ notes, onRefresh }) => {
     }
     setSelectedIds(new Set())
   }, [selectedIds, deleteNote])
-
-  // 刷新
-  const handleRefresh = useCallback(async () => {
-    setIsRefreshing(true)
-    await onRefresh()
-    setTimeout(() => setIsRefreshing(false), 300)
-  }, [onRefresh])
-
-  // 导出
-  const handleExport = useCallback(async () => {
-    const data = await exportNotes()
-    if (data) {
-      const blob = new Blob([data], { type: 'application/json' })
-      const url = URL.createObjectURL(blob)
-      const a = document.createElement('a')
-      a.href = url
-      a.download = `coolquick-backup-${new Date().toISOString().split('T')[0]}.json`
-      a.click()
-      URL.revokeObjectURL(url)
-    }
-  }, [exportNotes])
 
   // 快捷键
   useEffect(() => {
@@ -206,66 +171,39 @@ export const Drawer: React.FC<DrawerProps> = ({ notes, onRefresh }) => {
                 删除
               </motion.button>
             )}
-          </div>
+      </div>
 
-          {/* 排序 */}
-          <div className="flex items-center gap-1">
-            <button
-              onClick={() => setSortMode('time')}
-              className={`p-1.5 rounded-lg transition-colors ${
-                sortMode === 'time'
-                  ? 'bg-primary/10 text-primary'
-                  : 'text-slate-400 hover:text-slate-600'
-              }`}
-              title="按时间排序"
-            >
-              <Clock size={14} />
-            </button>
-            <button
-              onClick={() => setSortMode('favorite')}
-              className={`p-1.5 rounded-lg transition-colors ${
-                sortMode === 'favorite'
-                  ? 'bg-primary/10 text-primary'
-                  : 'text-slate-400 hover:text-slate-600'
-              }`}
-              title="按收藏排序"
-            >
-              <ArrowUpDown size={14} />
-            </button>
-          </div>
-        </div>
-
-        {/* 类型筛选 */}
-        <div className="flex items-center gap-1.5 mt-2 overflow-x-auto scrollbar-hide pb-1">
+      {/* 类型筛选 */}
+      <div className="flex items-center gap-1.5 mt-2 overflow-x-auto scrollbar-hide pb-1">
+        <button
+          onClick={() => setSelectedType(null)}
+          className={`px-2.5 py-1 text-[11px] rounded-full whitespace-nowrap transition-colors ${
+            selectedType === null
+              ? 'bg-primary text-white'
+              : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+          }`}
+        >
+          全部
+        </button>
+        {uniqueTypes.map(type => (
           <button
-            onClick={() => setSelectedType(null)}
-            className={`px-2.5 py-1 text-[11px] rounded-full whitespace-nowrap transition-colors ${
-              selectedType === null
+            key={type}
+            onClick={() => setSelectedType(selectedType === type ? null : type)}
+            className={`px-2 py-1 text-[11px] rounded-full whitespace-nowrap transition-colors flex items-center gap-1 ${
+              selectedType === type
                 ? 'bg-primary text-white'
                 : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
             }`}
           >
-            全部
+            <span>{typeIcons[type]}</span>
+            <span className="capitalize">{type}</span>
           </button>
-          {uniqueTypes.map(type => (
-            <button
-              key={type}
-              onClick={() => setSelectedType(selectedType === type ? null : type)}
-              className={`px-2 py-1 text-[11px] rounded-full whitespace-nowrap transition-colors flex items-center gap-1 ${
-                selectedType === type
-                  ? 'bg-primary text-white'
-                  : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-              }`}
-            >
-              <span>{typeIcons[type]}</span>
-              <span className="capitalize">{type}</span>
-            </button>
-          ))}
-        </div>
+        ))}
       </div>
+    </div>
 
-      {/* Notes List */}
-      <div className="flex-1 overflow-y-auto p-2 space-y-1.5 scrollbar-thin">
+    {/* Notes List */}
+    <div className="flex-1 overflow-y-auto scrollbar-thin">
         {filteredNotes.map((note, index) => (
           <NoteItem
             key={note.id}
@@ -292,29 +230,9 @@ export const Drawer: React.FC<DrawerProps> = ({ notes, onRefresh }) => {
       </div>
 
       {/* Footer */}
-      <div className="p-2 border-t border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 flex items-center justify-between flex-shrink-0">
-        <div className="flex items-center gap-1">
-          <button
-            onClick={handleRefresh}
-            disabled={isRefreshing}
-            className="p-1.5 text-slate-400 hover:text-primary rounded-lg transition-colors"
-            title="刷新"
-          >
-            <motion.div animate={{ rotate: isRefreshing ? 360 : 0 }} transition={{ duration: 0.5 }}>
-              <ExternalLink size={14} />
-            </motion.div>
-          </button>
-          <button
-            onClick={handleExport}
-            className="p-1.5 text-slate-400 hover:text-primary rounded-lg transition-colors"
-            title="导出"
-          >
-            <Download size={14} />
-          </button>
-        </div>
-
+      <div className="flex-shrink-0 px-3 py-2 border-t border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800">
         <div className="text-[10px] text-slate-400">
-          {filteredNotes.length} / {notes.length}
+          {filteredNotes.length} / {notes.length} 条笔记
         </div>
       </div>
     </div>
