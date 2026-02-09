@@ -47,7 +47,6 @@ impl Database {
             CREATE INDEX IF NOT EXISTS idx_notes_type ON notes(note_type);
             CREATE INDEX IF NOT EXISTS idx_notes_favorite ON notes(is_favorite);
             CREATE INDEX IF NOT EXISTS idx_notes_archived ON notes(is_archived);
-            CREATE INDEX IF NOT EXISTS idx_notes_hash ON notes(content_hash);
             
             CREATE TABLE IF NOT EXISTS custom_rules (
                 id TEXT PRIMARY KEY,
@@ -68,25 +67,41 @@ impl Database {
             "
         )?;
         
-        // Migration: Add title column if not exists (for existing databases)
+        // Migration: Add missing columns for existing databases
         // SQLite doesn't support IF NOT EXISTS in ALTER TABLE, so we check manually
-        let stmt = conn.prepare("PRAGMA table_info(notes)")?;
-        let columns: Vec<String> = stmt.column_names().iter().map(|s| s.to_string()).collect();
-        if !columns.contains(&"title".to_string()) {
+        self.add_column_if_not_exists(&conn, "notes", "title", "TEXT DEFAULT ''")?;
+        self.add_column_if_not_exists(&conn, "notes", "content_hash", "TEXT")?;
+        
+        // Create index for content_hash after column is ensured to exist
+        conn.execute(
+            "CREATE INDEX IF NOT EXISTS idx_notes_hash ON notes(content_hash)",
+            [],
+        ).ok(); // Ignore error if index already exists
+        
+        Ok(())
+    }
+
+    /// Helper function to add a column if it doesn't exist
+    fn add_column_if_not_exists(&self, conn: &Connection, table: &str, column: &str, column_def: &str) -> Result<()> {
+        let mut stmt = conn.prepare(&format!("PRAGMA table_info({})", table))?;
+        let existing_columns: Vec<String> = stmt.query_map([], |row| {
+            row.get::<_, String>(1)  // column name is at index 1
+        })?.filter_map(|r| r.ok()).collect();
+        
+        if !existing_columns.contains(&column.to_string()) {
             match conn.execute(
-                "ALTER TABLE notes ADD COLUMN title TEXT DEFAULT ''",
+                &format!("ALTER TABLE {} ADD COLUMN {} {}", table, column, column_def),
                 [],
             ) {
                 Ok(_) => {}
                 Err(e) => {
-                    // Ignore error if column already exists (race condition)
+                    // Ignore error if column already exists
                     if !e.to_string().contains("duplicate column name") {
                         return Err(e);
                     }
                 }
             };
         }
-        
         Ok(())
     }
 

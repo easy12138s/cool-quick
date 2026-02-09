@@ -92,10 +92,23 @@ fn on_paste_last_shortcut(app: &AppHandle) {
 }
 
 /// 解析快捷键字符串为 Tauri 支持的格式
+#[allow(dead_code)]
 pub fn normalize_shortcut(shortcut: &str) -> String {
     let normalized = shortcut.to_lowercase();
     normalized
         .replace("ctrl", "CommandOrControl")
         .replace("command", "CommandOrControl")
         .replace("cmd", "CommandOrControl")
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_normalize_shortcut() {
+        assert_eq!(normalize_shortcut("Ctrl+Shift+V"), "commandorcontrol+shift+v");
+        assert_eq!(normalize_shortcut("Cmd+A"), "commandorcontrol+a");
+        assert_eq!(normalize_shortcut("Command+C"), "commandorcontrol+c");
+    }
 }
