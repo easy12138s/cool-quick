@@ -132,17 +132,18 @@ impl Database {
                 id: row.get(0)?,
                 title: row.get(1)?,
                 content: row.get(2)?,
-                note_type: row.get(3)?,
-                tags: serde_json::from_str(&row.get::<_, String>(4)?).unwrap_or_default(),
-                source_app: row.get(5)?,
-                created_at: row.get(6)?,
-                updated_at: row.get(7)?,
-                is_favorite: row.get::<_, i32>(8)? != 0,
-                is_archived: row.get::<_, i32>(9)? != 0,
-                use_count: row.get(10)?,
+                // 跳过 content_hash (索引 3)，不映射到 Note 结构体
+                note_type: row.get(4)?,
+                tags: serde_json::from_str(&row.get::<_, String>(5)?).unwrap_or_default(),
+                source_app: row.get(6)?,
+                created_at: row.get(7)?,
+                updated_at: row.get(8)?,
+                is_favorite: row.get::<_, i32>(9)? != 0,
+                is_archived: row.get::<_, i32>(10)? != 0,
+                use_count: row.get(11)?,
             })
         })?;
-        
+
         notes.collect::<Result<Vec<_>>>()
     }
 
@@ -156,14 +157,15 @@ impl Database {
                 id: row.get(0)?,
                 title: row.get(1)?,
                 content: row.get(2)?,
-                note_type: row.get(3)?,
-                tags: serde_json::from_str(&row.get::<_, String>(4)?).unwrap_or_default(),
-                source_app: row.get(5)?,
-                created_at: row.get(6)?,
-                updated_at: row.get(7)?,
-                is_favorite: row.get::<_, i32>(8)? != 0,
-                is_archived: row.get::<_, i32>(9)? != 0,
-                use_count: row.get(10)?,
+                // 跳过 content_hash (索引 3)
+                note_type: row.get(4)?,
+                tags: serde_json::from_str(&row.get::<_, String>(5)?).unwrap_or_default(),
+                source_app: row.get(6)?,
+                created_at: row.get(7)?,
+                updated_at: row.get(8)?,
+                is_favorite: row.get::<_, i32>(9)? != 0,
+                is_archived: row.get::<_, i32>(10)? != 0,
+                use_count: row.get(11)?,
             }))
         } else {
             Ok(None)
@@ -183,14 +185,15 @@ impl Database {
                     id: row.get(0)?,
                     title: row.get(1)?,
                     content: row.get(2)?,
-                    note_type: row.get(3)?,
-                    tags: serde_json::from_str(&row.get::<_, String>(4)?).unwrap_or_default(),
-                    source_app: row.get(5)?,
-                    created_at: row.get(6)?,
-                    updated_at: row.get(7)?,
-                    is_favorite: row.get::<_, i32>(8)? != 0,
-                    is_archived: row.get::<_, i32>(9)? != 0,
-                    use_count: row.get(10)?,
+                    // 跳过 content_hash (索引 3)
+                    note_type: row.get(4)?,
+                    tags: serde_json::from_str(&row.get::<_, String>(5)?).unwrap_or_default(),
+                    source_app: row.get(6)?,
+                    created_at: row.get(7)?,
+                    updated_at: row.get(8)?,
+                    is_favorite: row.get::<_, i32>(9)? != 0,
+                    is_archived: row.get::<_, i32>(10)? != 0,
+                    use_count: row.get(11)?,
                 })
             })?;
             rows.collect::<Result<Vec<_>>>()?
@@ -203,14 +206,15 @@ impl Database {
                     id: row.get(0)?,
                     title: row.get(1)?,
                     content: row.get(2)?,
-                    note_type: row.get(3)?,
-                    tags: serde_json::from_str(&row.get::<_, String>(4)?).unwrap_or_default(),
-                    source_app: row.get(5)?,
-                    created_at: row.get(6)?,
-                    updated_at: row.get(7)?,
-                    is_favorite: row.get::<_, i32>(8)? != 0,
-                    is_archived: row.get::<_, i32>(9)? != 0,
-                    use_count: row.get(10)?,
+                    // 跳过 content_hash (索引 3)
+                    note_type: row.get(4)?,
+                    tags: serde_json::from_str(&row.get::<_, String>(5)?).unwrap_or_default(),
+                    source_app: row.get(6)?,
+                    created_at: row.get(7)?,
+                    updated_at: row.get(8)?,
+                    is_favorite: row.get::<_, i32>(9)? != 0,
+                    is_archived: row.get::<_, i32>(10)? != 0,
+                    use_count: row.get(11)?,
                 })
             })?;
             rows.collect::<Result<Vec<_>>>()?
@@ -332,17 +336,18 @@ impl Database {
                 id: row.get(0)?,
                 title: row.get(1)?,
                 content: row.get(2)?,
-                note_type: row.get(3)?,
-                tags: serde_json::from_str(&row.get::<_, String>(4)?).unwrap_or_default(),
-                source_app: row.get(5)?,
-                created_at: row.get(6)?,
-                updated_at: row.get(7)?,
-                is_favorite: row.get::<_, i32>(8)? != 0,
-                is_archived: row.get::<_, i32>(9)? != 0,
-                use_count: row.get(10)?,
+                // 跳过 content_hash (索引 3)
+                note_type: row.get(4)?,
+                tags: serde_json::from_str(&row.get::<_, String>(5)?).unwrap_or_default(),
+                source_app: row.get(6)?,
+                created_at: row.get(7)?,
+                updated_at: row.get(8)?,
+                is_favorite: row.get::<_, i32>(9)? != 0,
+                is_archived: row.get::<_, i32>(10)? != 0,
+                use_count: row.get(11)?,
             })
         })?;
-        
+
         notes.collect::<Result<Vec<_>>>()
     }
 
@@ -351,20 +356,21 @@ impl Database {
         let mut stmt = conn.prepare(
             "SELECT * FROM notes WHERE is_archived = 0 ORDER BY use_count DESC, updated_at DESC LIMIT ?1"
         )?;
-        
+
         let notes = stmt.query_map(params![limit], |row| {
             Ok(Note {
                 id: row.get(0)?,
                 title: row.get(1)?,
                 content: row.get(2)?,
-                note_type: row.get(3)?,
-                tags: serde_json::from_str(&row.get::<_, String>(4)?).unwrap_or_default(),
-                source_app: row.get(5)?,
-                created_at: row.get(6)?,
-                updated_at: row.get(7)?,
-                is_favorite: row.get::<_, i32>(8)? != 0,
-                is_archived: row.get::<_, i32>(9)? != 0,
-                use_count: row.get(10)?,
+                // 跳过 content_hash (索引 3)
+                note_type: row.get(4)?,
+                tags: serde_json::from_str(&row.get::<_, String>(5)?).unwrap_or_default(),
+                source_app: row.get(6)?,
+                created_at: row.get(7)?,
+                updated_at: row.get(8)?,
+                is_favorite: row.get::<_, i32>(9)? != 0,
+                is_archived: row.get::<_, i32>(10)? != 0,
+                use_count: row.get(11)?,
             })
         })?;
         
