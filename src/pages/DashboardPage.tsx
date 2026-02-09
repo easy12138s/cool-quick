@@ -6,6 +6,7 @@ import {
   Clock, 
   TrendingUp
 } from 'lucide-react'
+import { listen } from '@tauri-apps/api/tauri'
 import { useNotesStore } from '../stores/useNotesStore'
 import { StatCard } from '../components/dashboard/StatCard'
 import { TrendChart } from '../components/dashboard/TrendChart'
@@ -18,6 +19,15 @@ export const DashboardPage: React.FC = () => {
 
   useEffect(() => {
     loadNotes()
+
+    // 监听笔记更新事件，实时同步数据
+    const unlisten = listen('notes-updated', () => {
+      loadNotes()
+    })
+
+    return () => {
+      unlisten.then(f => f())
+    }
   }, [loadNotes])
 
   // Calculate stats
