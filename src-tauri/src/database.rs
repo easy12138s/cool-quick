@@ -120,62 +120,36 @@ impl Database {
 
     pub fn get_notes(&self, limit: i64, offset: i64, include_archived: bool) -> Result<Vec<Note>> {
         let conn = self.conn.lock().unwrap();
+        // 使用显式列名，不依赖列的顺序
         let sql = if include_archived {
-            "SELECT * FROM notes ORDER BY created_at DESC LIMIT ?1 OFFSET ?2"
+            "SELECT id, title, content, note_type, tags, source_app, created_at, updated_at, is_favorite, is_archived, use_count FROM notes ORDER BY created_at DESC LIMIT ?1 OFFSET ?2"
         } else {
-            "SELECT * FROM notes WHERE is_archived = 0 ORDER BY created_at DESC LIMIT ?1 OFFSET ?2"
+            "SELECT id, title, content, note_type, tags, source_app, created_at, updated_at, is_favorite, is_archived, use_count FROM notes WHERE is_archived = 0 ORDER BY created_at DESC LIMIT ?1 OFFSET ?2"
         };
-        
-        println!("[DEBUG] get_notes called: limit={}, offset={}, include_archived={}", limit, offset, include_archived);
         
         let mut stmt = conn.prepare(sql)?;
         let notes: Vec<Note> = stmt.query_map(params![limit, offset], |row| {
-            let id: String = row.get(0)?;
-            println!("[DEBUG] Loading note id={}", id);
-            
-            let title: String = row.get(1)?;
-            let content: String = row.get(2)?;
-            let _content_hash: String = row.get(3)?; // 跳过但读取验证
-            let note_type: String = row.get(4)?;
-            let tags_str: String = row.get(5)?;
-            let source_app: String = row.get(6)?;
-            let created_at: i64 = row.get(7)?;
-            let updated_at: i64 = row.get(8)?;
-            let is_favorite: i32 = row.get(9)?;
-            let is_archived: i32 = row.get(10)?;
-            let use_count: i32 = row.get(11)?;
-            
-            println!("[DEBUG] Raw data: type={}, tags_str='{}', is_archived={}", note_type, tags_str, is_archived);
-            
+            let tags_str: String = row.get(4)?;
             let tags: Vec<String> = if tags_str.is_empty() || tags_str == "null" {
                 vec![]
             } else {
                 serde_json::from_str(&tags_str).unwrap_or_default()
             };
             
-            let note = Note {
-                id,
-                title,
-                content,
-                note_type,
+            Ok(Note {
+                id: row.get(0)?,
+                title: row.get(1)?,
+                content: row.get(2)?,
+                note_type: row.get(3)?,
                 tags,
-                source_app,
-                created_at,
-                updated_at,
-                is_favorite: is_favorite != 0,
-                is_archived: is_archived != 0,
-                use_count,
-            };
-            
-            println!("[DEBUG] Loaded note: id={}, type={}, is_archived={}", note.id, note.note_type, note.is_archived);
-            Ok(note)
-        })?.filter_map(|r| match r {
-            Ok(note) => Some(note),
-            Err(e) => {
-                println!("[DEBUG] Failed to load note: {:?}", e);
-                None
-            }
-        }).collect();
+                source_app: row.get(5)?,
+                created_at: row.get(6)?,
+                updated_at: row.get(7)?,
+                is_favorite: row.get::<_, i32>(8)? != 0,
+                is_archived: row.get::<_, i32>(9)? != 0,
+                use_count: row.get(10)?,
+            })
+        })?.filter_map(|r| r.ok()).collect();
         
         println!("[DEBUG] get_notes returned {} notes", notes.len());
         Ok(notes)
@@ -183,23 +157,29 @@ impl Database {
 
     pub fn get_note_by_id(&self, id: &str) -> Result<Option<Note>> {
         let conn = self.conn.lock().unwrap();
-        let mut stmt = conn.prepare("SELECT * FROM notes WHERE id = ?1")?;
+        let mut stmt = conn.prepare("SELECT id, title, content, note_type, tags, source_app, created_at, updated_at, is_favorite, is_archived, use_count FROM notes WHERE id = ?1")?;
         let mut rows = stmt.query(params![id])?;
         
         if let Some(row) = rows.next()? {
+            let tags_str: String = row.get(4)?;
+            let tags: Vec<String> = if tags_str.is_empty() || tags_str == "null" {
+                vec![]
+            } else {
+                serde_json::from_str(&tags_str).unwrap_or_default()
+            };
+            
             Ok(Some(Note {
                 id: row.get(0)?,
                 title: row.get(1)?,
                 content: row.get(2)?,
-                // 跳过 content_hash (索引 3)
-                note_type: row.get(4)?,
-                tags: serde_json::from_str(&row.get::<_, String>(5)?).unwrap_or_default(),
-                source_app: row.get(6)?,
-                created_at: row.get(7)?,
-                updated_at: row.get(8)?,
-                is_favorite: row.get::<_, i32>(9)? != 0,
-                is_archived: row.get::<_, i32>(10)? != 0,
-                use_count: row.get(11)?,
+                note_type: row.get(3)?,
+                tags,
+                source_app: row.get(5)?,
+                created_at: row.get(6)?,
+                updated_at: row.get(7)?,
+                is_favorite: row.get::<_, i32>(8)? != 0,
+                is_archived: row.get::<_, i32>(9)? != 0,
+                use_count: row.get(10)?,
             }))
         } else {
             Ok(None)
@@ -212,43 +192,55 @@ impl Database {
         
         let notes: Vec<Note> = if let Some(t) = note_type {
             let mut stmt = conn.prepare(
-                "SELECT * FROM notes WHERE content LIKE ?1 AND note_type = ?2 AND is_archived = 0 ORDER BY created_at DESC LIMIT ?3"
+                "SELECT id, title, content, note_type, tags, source_app, created_at, updated_at, is_favorite, is_archived, use_count FROM notes WHERE content LIKE ?1 AND note_type = ?2 AND is_archived = 0 ORDER BY created_at DESC LIMIT ?3"
             )?;
             let rows = stmt.query_map(params![search_pattern, t, limit], |row| {
+                let tags_str: String = row.get(4)?;
+                let tags: Vec<String> = if tags_str.is_empty() || tags_str == "null" {
+                    vec![]
+                } else {
+                    serde_json::from_str(&tags_str).unwrap_or_default()
+                };
+                
                 Ok(Note {
                     id: row.get(0)?,
                     title: row.get(1)?,
                     content: row.get(2)?,
-                    // 跳过 content_hash (索引 3)
-                    note_type: row.get(4)?,
-                    tags: serde_json::from_str(&row.get::<_, String>(5)?).unwrap_or_default(),
-                    source_app: row.get(6)?,
-                    created_at: row.get(7)?,
-                    updated_at: row.get(8)?,
-                    is_favorite: row.get::<_, i32>(9)? != 0,
-                    is_archived: row.get::<_, i32>(10)? != 0,
-                    use_count: row.get(11)?,
+                    note_type: row.get(3)?,
+                    tags,
+                    source_app: row.get(5)?,
+                    created_at: row.get(6)?,
+                    updated_at: row.get(7)?,
+                    is_favorite: row.get::<_, i32>(8)? != 0,
+                    is_archived: row.get::<_, i32>(9)? != 0,
+                    use_count: row.get(10)?,
                 })
             })?;
             rows.collect::<Result<Vec<_>>>()?
         } else {
             let mut stmt = conn.prepare(
-                "SELECT * FROM notes WHERE content LIKE ?1 AND is_archived = 0 ORDER BY created_at DESC LIMIT ?2"
+                "SELECT id, title, content, note_type, tags, source_app, created_at, updated_at, is_favorite, is_archived, use_count FROM notes WHERE content LIKE ?1 AND is_archived = 0 ORDER BY created_at DESC LIMIT ?2"
             )?;
             let rows = stmt.query_map(params![search_pattern, limit], |row| {
+                let tags_str: String = row.get(4)?;
+                let tags: Vec<String> = if tags_str.is_empty() || tags_str == "null" {
+                    vec![]
+                } else {
+                    serde_json::from_str(&tags_str).unwrap_or_default()
+                };
+                
                 Ok(Note {
                     id: row.get(0)?,
                     title: row.get(1)?,
                     content: row.get(2)?,
-                    // 跳过 content_hash (索引 3)
-                    note_type: row.get(4)?,
-                    tags: serde_json::from_str(&row.get::<_, String>(5)?).unwrap_or_default(),
-                    source_app: row.get(6)?,
-                    created_at: row.get(7)?,
-                    updated_at: row.get(8)?,
-                    is_favorite: row.get::<_, i32>(9)? != 0,
-                    is_archived: row.get::<_, i32>(10)? != 0,
-                    use_count: row.get(11)?,
+                    note_type: row.get(3)?,
+                    tags,
+                    source_app: row.get(5)?,
+                    created_at: row.get(6)?,
+                    updated_at: row.get(7)?,
+                    is_favorite: row.get::<_, i32>(8)? != 0,
+                    is_archived: row.get::<_, i32>(9)? != 0,
+                    use_count: row.get(10)?,
                 })
             })?;
             rows.collect::<Result<Vec<_>>>()?
@@ -362,23 +354,29 @@ impl Database {
     pub fn get_archived_notes(&self, limit: i64, offset: i64) -> Result<Vec<Note>> {
         let conn = self.conn.lock().unwrap();
         let mut stmt = conn.prepare(
-            "SELECT * FROM notes WHERE is_archived = 1 ORDER BY created_at DESC LIMIT ?1 OFFSET ?2"
+            "SELECT id, title, content, note_type, tags, source_app, created_at, updated_at, is_favorite, is_archived, use_count FROM notes WHERE is_archived = 1 ORDER BY created_at DESC LIMIT ?1 OFFSET ?2"
         )?;
         
         let notes = stmt.query_map(params![limit, offset], |row| {
+            let tags_str: String = row.get(4)?;
+            let tags: Vec<String> = if tags_str.is_empty() || tags_str == "null" {
+                vec![]
+            } else {
+                serde_json::from_str(&tags_str).unwrap_or_default()
+            };
+            
             Ok(Note {
                 id: row.get(0)?,
                 title: row.get(1)?,
                 content: row.get(2)?,
-                // 跳过 content_hash (索引 3)
-                note_type: row.get(4)?,
-                tags: serde_json::from_str(&row.get::<_, String>(5)?).unwrap_or_default(),
-                source_app: row.get(6)?,
-                created_at: row.get(7)?,
-                updated_at: row.get(8)?,
-                is_favorite: row.get::<_, i32>(9)? != 0,
-                is_archived: row.get::<_, i32>(10)? != 0,
-                use_count: row.get(11)?,
+                note_type: row.get(3)?,
+                tags,
+                source_app: row.get(5)?,
+                created_at: row.get(6)?,
+                updated_at: row.get(7)?,
+                is_favorite: row.get::<_, i32>(8)? != 0,
+                is_archived: row.get::<_, i32>(9)? != 0,
+                use_count: row.get(10)?,
             })
         })?;
 
@@ -388,26 +386,32 @@ impl Database {
     pub fn get_recently_used_notes(&self, limit: i64) -> Result<Vec<Note>> {
         let conn = self.conn.lock().unwrap();
         let mut stmt = conn.prepare(
-            "SELECT * FROM notes WHERE is_archived = 0 ORDER BY use_count DESC, updated_at DESC LIMIT ?1"
+            "SELECT id, title, content, note_type, tags, source_app, created_at, updated_at, is_favorite, is_archived, use_count FROM notes WHERE is_archived = 0 ORDER BY use_count DESC, updated_at DESC LIMIT ?1"
         )?;
 
         let notes = stmt.query_map(params![limit], |row| {
+            let tags_str: String = row.get(4)?;
+            let tags: Vec<String> = if tags_str.is_empty() || tags_str == "null" {
+                vec![]
+            } else {
+                serde_json::from_str(&tags_str).unwrap_or_default()
+            };
+            
             Ok(Note {
                 id: row.get(0)?,
                 title: row.get(1)?,
                 content: row.get(2)?,
-                // 跳过 content_hash (索引 3)
-                note_type: row.get(4)?,
-                tags: serde_json::from_str(&row.get::<_, String>(5)?).unwrap_or_default(),
-                source_app: row.get(6)?,
-                created_at: row.get(7)?,
-                updated_at: row.get(8)?,
-                is_favorite: row.get::<_, i32>(9)? != 0,
-                is_archived: row.get::<_, i32>(10)? != 0,
-                use_count: row.get(11)?,
+                note_type: row.get(3)?,
+                tags,
+                source_app: row.get(5)?,
+                created_at: row.get(6)?,
+                updated_at: row.get(7)?,
+                is_favorite: row.get::<_, i32>(8)? != 0,
+                is_archived: row.get::<_, i32>(9)? != 0,
+                use_count: row.get(10)?,
             })
         })?;
-        
+
         notes.collect::<Result<Vec<_>>>()
     }
 
