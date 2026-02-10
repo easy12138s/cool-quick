@@ -1,12 +1,7 @@
 import React, { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
+import { ClipboardList, Star, Clock, TrendingUp, Calendar, Tag } from 'lucide-react'
 import {
-  ClipboardList,
-  Star,
-  Clock,
-  TrendingUp,
-  Calendar,
-  Tag,
   BarChart,
   Bar,
   XAxis,
