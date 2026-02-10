@@ -69,6 +69,18 @@ export const NoteItem = forwardRef<HTMLDivElement, NoteItemProps>(
       }
     }, [])
 
+    const handleMouseLeave = useCallback(() => {
+      // 鼠标移出卡片时，清除长按定时器并隐藏删除按钮
+      if (longPressTimer.current) {
+        clearTimeout(longPressTimer.current)
+        longPressTimer.current = null
+      }
+      if (showDelete) {
+        setShowDelete(false)
+      }
+      isLongPress.current = false
+    }, [showDelete])
+
     const handleClick = useCallback(
       (e: React.MouseEvent) => {
         if (isLongPress.current) return
@@ -120,6 +132,7 @@ export const NoteItem = forwardRef<HTMLDivElement, NoteItemProps>(
         } shadow-sm`}
         onMouseDown={handleMouseDown}
         onMouseUp={handleMouseUp}
+        onMouseLeave={handleMouseLeave}
         onClick={handleClick}
       >
         {showDelete && (
