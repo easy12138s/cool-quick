@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="zh-CN">
+<html lang="zh-CN" class="h-full">
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
@@ -10,6 +10,20 @@
       body {
         user-select: none;
         -webkit-user-select: none;
+      }
+      
+      /* Ensure full height for all window types */
+      html, body, #root {
+        height: 100%;
+        margin: 0;
+        padding: 0;
+        overflow: hidden;
+      }
+      
+      /* Drawer window specific - ensure proper scrolling */
+      body[data-window="drawer"] #root {
+        height: 100vh;
+        overflow: hidden;
       }
     </style>
   </head>

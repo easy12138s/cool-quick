@@ -144,6 +144,9 @@ function App() {
   useEffect(() => {
     // Apply transparent background for special windows
     applyTransparentBackground(windowType)
+    
+    // Set window type attribute on body for CSS targeting
+    document.body.setAttribute('data-window', windowType)
 
     loadConfig()
     setupClipboardListener()

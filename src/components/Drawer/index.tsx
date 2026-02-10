@@ -148,7 +148,7 @@ export const Drawer: React.FC<DrawerProps> = ({ notes, onRefresh }) => {
 
   return (
     <div
-      className="w-full h-full bg-white dark:bg-slate-900 flex flex-col rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-700 overflow-hidden"
+      className="w-full h-screen bg-white dark:bg-slate-900 flex flex-col rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-700 overflow-hidden"
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
     >
@@ -210,7 +210,7 @@ export const Drawer: React.FC<DrawerProps> = ({ notes, onRefresh }) => {
       </div>
 
       {/* Notes List */}
-      <div ref={scrollContainerRef} key={drawerKey} className="flex-1 overflow-y-auto scrollbar-thin-extra">
+      <div ref={scrollContainerRef} key={drawerKey} className="flex-1 min-h-0 overflow-y-auto scrollbar-thin-extra">
         <div className="space-y-2 p-3">
           {filteredNotes.map((note, index) => (
             <NoteItem
