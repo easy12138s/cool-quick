@@ -1,5 +1,15 @@
+# Dependencies
+/node_modules/
+
+# Build outputs
+/dist/
+/dist-ssr/
+/build/
+/release/
+/coverage/
+
 # Logs
-logs
+/logs/
 *.log
 npm-debug.log*
 yarn-debug.log*
@@ -7,35 +17,27 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
-node_modules
-dist
-dist-ssr
+# Local env / config
 *.local
+.env
+.env.*
 
-# Editor directories and files
+# Editors
+.idea/
 .vscode/*
 !.vscode/extensions.json
-.idea
+!.vscode/settings.json
+!.vscode/launch.json
+!.vscode/tasks.json
+
+# OS
 .DS_Store
-*.suo
-*.ntvs*
-*.njsproj
-*.sln
-*.sw?
+Thumbs.db
+Desktop.ini
 
-# Tauri
-/src-tauri/target
-/src-tauri/gen
-/src-tauri/Cargo.lock
-
-# Environment variables
-.env
-.env.local
-.env.*.local
-
-# Build outputs
-/release
-/build
+# Tauri / Rust
+/src-tauri/target/
+/src-tauri/gen/
 
 # Database files
 *.db
@@ -43,5 +45,8 @@ dist-ssr
 *.db-shm
 *.db-wal
 
-# OS files
-Thumbs.db
+# Secrets / signing keys (never commit)
+*.pem
+*.p12
+*.pfx
+*.key

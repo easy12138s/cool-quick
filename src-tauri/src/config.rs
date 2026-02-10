@@ -3,6 +3,8 @@
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 use std::fs;
+use std::path::Path;
+use std::fs::OpenOptions;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(default)]
@@ -91,7 +93,7 @@ impl Default for AppConfig {
 }
 
 impl AppConfig {
-  fn default_db_path() -> String {
+  fn legacy_default_db_path() -> String {
     let base_dir = if cfg!(target_os = "windows") {
       PathBuf::from(std::env::var("APPDATA").unwrap_or_else(|_| ".".to_string()))
     } else if cfg!(target_os = "macos") {
@@ -106,6 +108,37 @@ impl AppConfig {
     let app_dir = base_dir.join("CoolQuick");
     fs::create_dir_all(&app_dir).ok();
     app_dir.join("data.db").to_string_lossy().to_string()
+  }
+
+  fn install_dir() -> Option<PathBuf> {
+    std::env::current_exe().ok().and_then(|p| p.parent().map(|d| d.to_path_buf()))
+  }
+
+  fn install_db_path() -> Option<String> {
+    Self::install_dir().map(|d| d.join("data.db").to_string_lossy().to_string())
+  }
+
+  fn is_writable_db_path(path: &Path) -> bool {
+    let parent_ok = path.parent().map(|p| fs::create_dir_all(p).is_ok()).unwrap_or(true);
+    if !parent_ok {
+      return false;
+    }
+    OpenOptions::new()
+      .create(true)
+      .append(true)
+      .open(path)
+      .is_ok()
+  }
+
+  fn default_db_path() -> String {
+    if let Some(path) = Self::install_db_path() {
+      let pathbuf = PathBuf::from(&path);
+      if Self::is_writable_db_path(&pathbuf) {
+        return path;
+      }
+    }
+
+    Self::legacy_default_db_path()
   }
 
   fn config_path() -> PathBuf {
@@ -129,7 +162,21 @@ impl AppConfig {
     let path = Self::config_path();
     if path.exists() {
       let content = fs::read_to_string(&path)?;
-      let config: AppConfig = serde_json::from_str(&content)?;
+      let mut config: AppConfig = serde_json::from_str(&content)?;
+
+      if config.db_path.trim().is_empty() {
+        config.db_path = Self::default_db_path();
+        config.save()?;
+        return Ok(config);
+      }
+
+      let configured_path = PathBuf::from(&config.db_path);
+      if !Self::is_writable_db_path(&configured_path) {
+        config.db_path = Self::legacy_default_db_path();
+        config.save()?;
+        return Ok(config);
+      }
+
       Ok(config)
     } else {
       let config = AppConfig::default();
