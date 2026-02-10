@@ -148,7 +148,7 @@ export const Drawer: React.FC<DrawerProps> = ({ notes, onRefresh }) => {
 
   return (
     <div
-      className="w-full h-full bg-white dark:bg-slate-900 flex flex-col rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-700"
+      className="w-full h-full bg-white dark:bg-slate-900 flex flex-col rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-700 overflow-hidden"
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
     >

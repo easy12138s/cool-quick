@@ -165,10 +165,15 @@
     background: hsl(var(--muted-foreground) / 0.4);
   }
 
-  /* 超细滚动条 - 用于抽屉等组件 */
+  /* 极简滚动条 - 默认隐藏，hover时显示 */
+  .scrollbar-thin-extra {
+    scrollbar-width: thin;
+    scrollbar-color: transparent transparent;
+  }
+  
   .scrollbar-thin-extra::-webkit-scrollbar {
-    width: 3px;
-    height: 3px;
+    width: 4px;
+    height: 4px;
   }
 
   .scrollbar-thin-extra::-webkit-scrollbar-track {
@@ -176,12 +181,21 @@
   }
 
   .scrollbar-thin-extra::-webkit-scrollbar-thumb {
-    background: hsl(var(--muted-foreground) / 0.1);
+    background: transparent;
     border-radius: 2px;
+    transition: background 0.3s ease;
+  }
+
+  .scrollbar-thin-extra:hover {
+    scrollbar-color: hsl(var(--muted-foreground) / 0.2) transparent;
   }
 
   .scrollbar-thin-extra:hover::-webkit-scrollbar-thumb {
     background: hsl(var(--muted-foreground) / 0.2);
+  }
+
+  .scrollbar-thin-extra:hover::-webkit-scrollbar-thumb:hover {
+    background: hsl(var(--muted-foreground) / 0.35);
   }
 
   .scrollbar-hide::-webkit-scrollbar {
