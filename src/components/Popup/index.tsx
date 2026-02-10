@@ -15,7 +15,7 @@ interface PopupProps {
   onIgnoreType?: (type: string) => void
 }
 
-const MIN_POPUP_LENGTH = 10
+const MIN_POPUP_LENGTH = 0
 
 export const Popup: React.FC<PopupProps> = ({
   content,

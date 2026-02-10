@@ -19,8 +19,25 @@ export interface AppConfig {
   popup_auto_close_seconds: number
   floating_window_size: number
   floating_window_opacity: number
+  floating_visible: boolean
+  floating_hover_open_drawer: boolean
+  floating_hover_delay_ms: number
+  floating_hide_drawer_on_drag: boolean
+  drawer_auto_hide: boolean
+  drawer_hide_delay_ms: number
+  drawer_default_limit: number
+  drawer_sort: 'recent' | 'frequent'
+  popup_enabled: boolean
+  popup_types: string[]
+  popup_dedupe_window_ms: number
+  save_mode: 'manual' | 'auto'
+  dedupe_mode: 'merge' | 'new'
+  never_archive_favorites: boolean
+  export_mask_sensitive: boolean
   shortcut_search: string
   shortcut_paste_last: string
+  shortcut_toggle_drawer: string
+  shortcut_toggle_popup: string
   enable_encryption: boolean
   archive_after_days: number
   theme: 'light' | 'dark' | 'system'

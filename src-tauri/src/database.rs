@@ -118,6 +118,46 @@ impl Database {
         self.save_note_with_hash(content, &content_hash, note_type, tags, source_app, title)
     }
 
+    pub fn save_note_smart(
+        &self,
+        content: &str,
+        note_type: ContentType,
+        tags: &str,
+        source_app: &str,
+        title: Option<&str>,
+        dedupe_mode: &str,
+    ) -> Result<String> {
+        use std::collections::hash_map::DefaultHasher;
+        use std::hash::{Hash, Hasher};
+
+        let normalized = content.trim().replace("\r\n", "\n");
+        let mut hasher = DefaultHasher::new();
+        normalized.hash(&mut hasher);
+        let content_hash = format!("{:x}", hasher.finish());
+
+        if dedupe_mode == "merge" {
+            let conn = self.conn.lock().unwrap();
+            let existing_id: Option<String> = conn
+                .query_row(
+                    "SELECT id FROM notes WHERE content_hash = ?1 AND is_archived = 0 LIMIT 1",
+                    params![content_hash],
+                    |row| row.get(0),
+                )
+                .ok();
+
+            if let Some(id) = existing_id {
+                let now = Utc::now().timestamp();
+                conn.execute(
+                    "UPDATE notes SET updated_at = ?1, use_count = use_count + 1, source_app = ?2 WHERE id = ?3",
+                    params![now, source_app, id],
+                )?;
+                return Ok(id);
+            }
+        }
+
+        self.save_note_with_hash(content, &content_hash, note_type, tags, source_app, title)
+    }
+
     pub fn get_notes(&self, limit: i64, offset: i64, include_archived: bool) -> Result<Vec<Note>> {
         let conn = self.conn.lock().unwrap();
         // 使用显式列名，不依赖列的顺序
@@ -330,13 +370,21 @@ impl Database {
         Ok(())
     }
 
-    pub fn archive_notes_by_date(&self, days: i64) -> Result<i64> {
+    pub fn archive_notes_by_date(&self, days: i64, skip_favorites: bool) -> Result<i64> {
         let conn = self.conn.lock().unwrap();
         let cutoff = Utc::now().timestamp() - (days * 24 * 60 * 60);
-        let count = conn.execute(
-            "UPDATE notes SET is_archived = 1, updated_at = ?1 WHERE created_at < ?2 AND is_archived = 0",
-            params![Utc::now().timestamp(), cutoff],
-        )?;
+        let now = Utc::now().timestamp();
+        let count = if skip_favorites {
+            conn.execute(
+                "UPDATE notes SET is_archived = 1, updated_at = ?1 WHERE created_at < ?2 AND is_archived = 0 AND is_favorite = 0",
+                params![now, cutoff],
+            )?
+        } else {
+            conn.execute(
+                "UPDATE notes SET is_archived = 1, updated_at = ?1 WHERE created_at < ?2 AND is_archived = 0",
+                params![now, cutoff],
+            )?
+        };
         Ok(count as i64)
     }
 

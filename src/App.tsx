@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react'
+import React, { useEffect, useRef } from 'react'
 import { createHashRouter, RouterProvider } from 'react-router-dom'
 import { listen, emit } from '@tauri-apps/api/event'
 import { invoke } from '@tauri-apps/api/tauri'
@@ -14,7 +14,7 @@ import { FloatingWindow } from './components/FloatingWindow/index'
 import { Drawer } from './components/Drawer'
 import { Popup } from './components/Popup'
 import { setupClipboardListener } from './stores/useNotesStore'
-import { setupThemeListener } from './stores/useConfigStore'
+import { setupConfigListener, setupThemeListener } from './stores/useConfigStore'
 import { useNotesStore } from './stores/useNotesStore'
 import { useConfigStore } from './stores/useConfigStore'
 import { usePopupStore } from './stores/usePopupStore'
@@ -59,12 +59,23 @@ const mainRouter = createHashRouter([
 // Floating window component
 const FloatingWindowWrapper: React.FC = () => {
   const { notes } = useNotesStore()
+  const { config } = useConfigStore()
 
   const handleMouseEnter = () => {
-    invoke('window_show_drawer')
+    invoke('window_open_drawer')
   }
 
-  return <FloatingWindow onMouseEnter={handleMouseEnter} noteCount={notes.length} />
+  return (
+    <FloatingWindow
+      onMouseEnter={handleMouseEnter}
+      noteCount={notes.length}
+      orbSize={config.floating_window_size}
+      opacity={config.floating_window_opacity}
+      hoverDelayMs={config.floating_hover_delay_ms}
+      hoverOpenDrawer={config.floating_hover_open_drawer}
+      hideDrawerOnDrag={config.floating_hide_drawer_on_drag}
+    />
+  )
 }
 
 // Drawer window component
@@ -97,7 +108,7 @@ const PopupWindowWrapper: React.FC = () => {
     console.log('handleSave called, popupData:', popupData)
     if (popupData) {
       try {
-        const id = await invoke('notes_create', {
+        const id = await invoke('notes_create_smart', {
           request: {
             content: popupData.content,
             noteType: popupData.type,
@@ -105,6 +116,7 @@ const PopupWindowWrapper: React.FC = () => {
             sourceApp: popupData.sourceApp || '',
             title: undefined,
           },
+          dedupeMode: config.dedupe_mode,
         })
         console.log('Note saved successfully, ID:', id)
       } catch (error) {
@@ -139,6 +151,7 @@ function App() {
   const windowType = getWindowType()
   const { loadConfig } = useConfigStore()
   const { showPopup, setPopupData } = usePopupStore()
+  const lastPopupRef = useRef<{ content: string; type: string; ts: number } | null>(null)
 
   useEffect(() => {
     // Apply transparent background for special windows
@@ -150,10 +163,55 @@ function App() {
     loadConfig()
     setupClipboardListener()
     setupThemeListener()
+    setupConfigListener()
 
-    const unlistenClipboard = listen('clipboard-change', (event: TauriEvent) => {
-      setPopupData(event.payload)
-      showPopup()
+    const unlistenClipboard = listen('clipboard-change', async (event: TauriEvent) => {
+      const config = useConfigStore.getState().config
+      const loadNotes = useNotesStore.getState().loadNotes
+      const payload = event.payload
+      const content = payload.content ?? ''
+      const type = payload.type ?? 'text'
+      const sourceApp = payload.sourceApp ?? ''
+
+      if (content.length < config.min_popup_length) return
+      if (config.popup_types.length > 0 && !config.popup_types.includes(type)) return
+
+      const now = Date.now()
+      const last = lastPopupRef.current
+      if (
+        last &&
+        last.content === content &&
+        last.type === type &&
+        now - last.ts < config.popup_dedupe_window_ms
+      ) {
+        return
+      }
+      lastPopupRef.current = { content, type, ts: now }
+
+      if (config.save_mode === 'auto') {
+        await invoke('notes_create_smart', {
+          request: {
+            content,
+            noteType: type,
+            tags: [],
+            sourceApp,
+            title: undefined,
+          },
+          dedupeMode: config.dedupe_mode,
+        }).catch(() => {})
+
+        await loadNotes().catch(() => {})
+        await emit('notes-updated').catch(() => {})
+        return
+      }
+
+      if (!config.popup_enabled) return
+
+      await emit('floating-peek', { durationMs: 1000 }).catch(() => {})
+      setTimeout(() => {
+        setPopupData(payload)
+        showPopup()
+      }, 160)
     })
 
     return () => {

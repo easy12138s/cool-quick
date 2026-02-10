@@ -24,6 +24,91 @@ pub fn hide_floating_window(app: &AppHandle) {
     }
 }
 
+pub fn apply_floating_window_style(app: &AppHandle, size: u32, _opacity: f64) {
+    if let Some(window) = app.get_window("floating") {
+        let _ = window.set_size(tauri::Size::Physical(PhysicalSize::new(size, size)));
+    }
+}
+
+pub fn snap_floating_window_to_edge(app: &AppHandle) {
+    let Some(window) = app.get_window("floating") else { return };
+
+    let floating_pos = match window.outer_position() {
+        Ok(p) => p,
+        Err(_) => return,
+    };
+    let floating_size = match window.outer_size() {
+        Ok(s) => s,
+        Err(_) => return,
+    };
+
+    let monitor = match window.current_monitor() {
+        Ok(m) => m,
+        Err(_) => None,
+    };
+    let Some(monitor) = monitor else { return };
+
+    let screen_size = monitor.size();
+    let screen_pos = monitor.position();
+
+    let center_x = screen_pos.x + (screen_size.width as i32) / 2;
+    let floating_center_x = floating_pos.x + (floating_size.width as i32) / 2;
+    let side = if floating_center_x < center_x { "left" } else { "right" };
+
+    let target_x = if side == "left" {
+        screen_pos.x
+    } else {
+        screen_pos.x + screen_size.width as i32 - floating_size.width as i32
+    };
+    let min_y = screen_pos.y;
+    let max_y = screen_pos.y + screen_size.height as i32 - floating_size.height as i32;
+    let target_y = floating_pos.y.max(min_y).min(max_y);
+
+    let _ = window.set_position(PhysicalPosition::new(target_x, target_y));
+    let _ = app.emit_all("floating-edge-changed", serde_json::json!({
+        "side": side,
+        "x": target_x,
+        "y": target_y
+    }));
+}
+
+pub fn open_drawer_window(app: &AppHandle) {
+    if let Some(window) = app.get_window("drawer") {
+        // Position drawer relative to floating window
+        if let Some(floating) = app.get_window("floating") {
+            let floating_pos = floating.outer_position().unwrap_or(PhysicalPosition::new(100, 100));
+            let floating_size = floating.outer_size().unwrap_or(PhysicalSize::new(60, 60));
+
+            let monitor = floating.current_monitor().unwrap();
+            if let Some(monitor) = monitor {
+                let screen_size = monitor.size();
+                let screen_pos = monitor.position();
+
+                let relative_x = floating_pos.x - screen_pos.x;
+                let drawer_width = 350;
+                let drawer_height = 500;
+
+                let (drawer_x, drawer_y) = if relative_x < (screen_size.width as i32) / 2 {
+                    (floating_pos.x + floating_size.width as i32, floating_pos.y)
+                } else {
+                    (floating_pos.x - drawer_width, floating_pos.y)
+                };
+
+                let final_x = drawer_x
+                    .max(screen_pos.x)
+                    .min(screen_pos.x + screen_size.width as i32 - drawer_width);
+                let final_y = drawer_y
+                    .max(screen_pos.y)
+                    .min(screen_pos.y + screen_size.height as i32 - drawer_height);
+
+                let _ = window.set_position(PhysicalPosition::new(final_x, final_y));
+            }
+        }
+
+        show_drawer_window(app);
+    }
+}
+
 pub fn show_drawer_window(app: &AppHandle) {
     if let Some(window) = app.get_window("drawer") {
         // 发送事件通知前端重置状态

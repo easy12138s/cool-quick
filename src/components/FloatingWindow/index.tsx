@@ -1,23 +1,40 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { invoke } from '@tauri-apps/api/tauri'
+import { listen } from '@tauri-apps/api/event'
 import coolQuickIcon from '../../assets/coolquick-icon.svg'
 
 interface FloatingWindowProps {
   onMouseEnter: () => void
   noteCount?: number
+  orbSize?: number
+  opacity?: number
+  hoverDelayMs?: number
+  hoverOpenDrawer?: boolean
+  hideDrawerOnDrag?: boolean
 }
 
-const ORB_SIZE = 48
+const DEFAULT_ORB_SIZE = 48
 const DRAG_THRESHOLD_PX = 3
 const DRAG_HOLD_MS = 120
 const CLICK_MAX_MS = 250
+const REVEAL_MS = 160
 
-export const FloatingWindow: React.FC<FloatingWindowProps> = ({ onMouseEnter, noteCount = 0 }) => {
+export const FloatingWindow: React.FC<FloatingWindowProps> = ({
+  onMouseEnter,
+  noteCount = 0,
+  orbSize = DEFAULT_ORB_SIZE,
+  opacity = 1,
+  hoverDelayMs = 300,
+  hoverOpenDrawer = true,
+  hideDrawerOnDrag = true,
+}) => {
   const [isHovered, setIsHovered] = useState(false)
   const [showPulse, setShowPulse] = useState(false)
   const [isReady, setIsReady] = useState(false)
   const [isDragging, setIsDragging] = useState(false)
+  const [edgeSide, setEdgeSide] = useState<'left' | 'right'>('right')
+  const [forceRevealed, setForceRevealed] = useState(false)
 
   const drawerTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const pulseTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -25,6 +42,8 @@ export const FloatingWindow: React.FC<FloatingWindowProps> = ({ onMouseEnter, no
 
   const dragHoldTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const pointerDownRef = useRef(false)
+  const hoveredRef = useRef(false)
+  const forceRevealTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const dragStartedRef = useRef(false)
   const pointerIdRef = useRef<number | null>(null)
   const pointerDownTimeRef = useRef(0)
@@ -33,6 +52,42 @@ export const FloatingWindow: React.FC<FloatingWindowProps> = ({ onMouseEnter, no
   // 初始化
   useEffect(() => {
     setIsReady(true)
+  }, [])
+
+  useEffect(() => {
+    const unlisten = listen('floating-edge-changed', (event) => {
+      const payload = event.payload as any
+      if (payload?.side === 'left' || payload?.side === 'right') {
+        setEdgeSide(payload.side)
+      }
+
+      setIsDragging(false)
+      pointerDownRef.current = false
+      dragStartedRef.current = false
+      pointerIdRef.current = null
+      if (dragHoldTimerRef.current) {
+        clearTimeout(dragHoldTimerRef.current)
+        dragHoldTimerRef.current = null
+      }
+    })
+
+    return () => {
+      unlisten.then(f => f())
+    }
+  }, [])
+
+  useEffect(() => {
+    const unlisten = listen('floating-peek', (event) => {
+      const payload = event.payload as any
+      const durationMs = typeof payload?.durationMs === 'number' ? payload.durationMs : 900
+      setForceRevealed(true)
+      if (forceRevealTimerRef.current) clearTimeout(forceRevealTimerRef.current)
+      forceRevealTimerRef.current = setTimeout(() => setForceRevealed(false), durationMs)
+    })
+
+    return () => {
+      unlisten.then(f => f())
+    }
   }, [])
 
   // 脉冲动画 - 只在数量增加时触发
@@ -51,6 +106,7 @@ export const FloatingWindow: React.FC<FloatingWindowProps> = ({ onMouseEnter, no
       if (drawerTimerRef.current) clearTimeout(drawerTimerRef.current)
       if (pulseTimerRef.current) clearTimeout(pulseTimerRef.current)
       if (dragHoldTimerRef.current) clearTimeout(dragHoldTimerRef.current)
+      if (forceRevealTimerRef.current) clearTimeout(forceRevealTimerRef.current)
     }
   }, [])
 
@@ -79,12 +135,14 @@ export const FloatingWindow: React.FC<FloatingWindowProps> = ({ onMouseEnter, no
     clearDragHoldTimer()
 
     try {
-      await invoke('window_hide_drawer')
+      if (hideDrawerOnDrag) {
+        await invoke('window_hide_drawer')
+      }
       await invoke('window_start_dragging')
     } catch {
       // ignore
     }
-  }, [clearDragHoldTimer, clearHoverTimer])
+  }, [clearDragHoldTimer, clearHoverTimer, hideDrawerOnDrag])
 
   const handlePointerEnter = useCallback(() => {
     if (isDragging) {
@@ -97,16 +155,19 @@ export const FloatingWindow: React.FC<FloatingWindowProps> = ({ onMouseEnter, no
 
     if (pointerDownRef.current) return
     setIsHovered(true)
+    hoveredRef.current = true
+    if (!hoverOpenDrawer) return
     clearHoverTimer()
     drawerTimerRef.current = setTimeout(() => {
-      if (!pointerDownRef.current && !isDragging) {
+      if (hoveredRef.current && !pointerDownRef.current && !isDragging) {
         onMouseEnter()
       }
-    }, 300)
-  }, [clearDragHoldTimer, clearHoverTimer, isDragging, onMouseEnter])
+    }, REVEAL_MS + hoverDelayMs)
+  }, [clearDragHoldTimer, clearHoverTimer, hoverDelayMs, hoverOpenDrawer, isDragging, onMouseEnter])
 
   const handlePointerLeave = useCallback(() => {
     setIsHovered(false)
+    hoveredRef.current = false
     clearHoverTimer()
   }, [clearHoverTimer])
 
@@ -187,12 +248,15 @@ export const FloatingWindow: React.FC<FloatingWindowProps> = ({ onMouseEnter, no
 
   if (!isReady) return null
 
+  const isRevealed = isHovered || isDragging || forceRevealed
+
   return (
     <div
       className="w-full h-full flex items-center justify-center"
       style={{
         background: 'transparent',
         cursor: isDragging ? 'grabbing' : 'grab',
+        opacity: isHovered && !isDragging ? 1 : opacity,
       }}
       onPointerEnter={handlePointerEnter}
       onPointerLeave={handlePointerLeave}
@@ -203,9 +267,15 @@ export const FloatingWindow: React.FC<FloatingWindowProps> = ({ onMouseEnter, no
     >
       <motion.div
         className="relative"
-        style={{ width: ORB_SIZE, height: ORB_SIZE }}
-        animate={{ scale: isHovered && !isDragging ? 1.08 : 1 }}
-        transition={{ type: 'spring', stiffness: 400, damping: 25 }}
+        style={{ width: orbSize, height: orbSize }}
+        animate={{
+          x: isRevealed ? 0 : edgeSide === 'right' ? orbSize / 2 : -orbSize / 2,
+          scale: isHovered && !isDragging ? 1.08 : 1,
+        }}
+        transition={{
+          x: { type: 'tween', duration: REVEAL_MS / 1000, ease: 'easeOut' },
+          scale: { type: 'spring', stiffness: 400, damping: 25 },
+        }}
       >
         {/* 光晕效果 - 悬停时不显示阴影 */}
         <motion.div

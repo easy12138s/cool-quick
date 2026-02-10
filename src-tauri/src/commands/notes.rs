@@ -1,6 +1,7 @@
 use crate::database::Database;
 use crate::models::Note;
 use crate::detector::ContentType;
+use crate::config::AppConfig;
 use std::sync::Arc;
 use tauri::{command, State};
 
@@ -57,6 +58,46 @@ pub async fn notes_create(
         .map_err(|e| e.to_string())?;
     
     Ok(id)
+}
+
+#[command]
+pub async fn notes_create_smart(
+    db: State<'_, Arc<Database>>,
+    args: CreateSmartArgs,
+) -> Result<String, String> {
+    let request = args.request;
+    let dedupe_mode = args.dedupe_mode;
+
+    let content_type = match request.note_type.as_str() {
+        "phone" => ContentType::Phone,
+        "email" => ContentType::Email,
+        "url" => ContentType::Url,
+        "code" => ContentType::Code,
+        "password" => ContentType::Password,
+        _ => ContentType::Text,
+    };
+
+    let tags_json = serde_json::to_string(&request.tags).unwrap_or_default();
+
+    let id = db
+        .save_note_smart(
+            &request.content,
+            content_type,
+            &tags_json,
+            &request.source_app,
+            request.title.as_deref(),
+            &dedupe_mode,
+        )
+        .map_err(|e| e.to_string())?;
+
+    Ok(id)
+}
+
+#[derive(serde::Deserialize)]
+pub struct CreateSmartArgs {
+    pub request: CreateNoteRequest,
+    #[serde(rename = "dedupeMode")]
+    pub dedupe_mode: String,
 }
 
 #[command]
@@ -135,7 +176,18 @@ pub async fn notes_export(
     format: String,
 ) -> Result<String, String> {
     match format.as_str() {
-        "json" => db.export_to_json().map_err(|e| e.to_string()),
+        "json" => {
+            let mut notes = db.get_notes(10000, 0, true).map_err(|e| e.to_string())?;
+            let config = AppConfig::load().unwrap_or_default();
+            if config.export_mask_sensitive {
+                for note in &mut notes {
+                    if note.note_type == "password" {
+                        note.content = "••••••••".to_string();
+                    }
+                }
+            }
+            serde_json::to_string_pretty(&notes).map_err(|e| e.to_string())
+        }
         _ => Err("Unsupported format".to_string()),
     }
 }

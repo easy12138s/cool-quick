@@ -23,11 +23,11 @@ export const Header: React.FC = () => {
   }
 
   // Cycle through themes: light → dark → system → light
-  const cycleTheme = () => {
+  const cycleTheme = async () => {
     const themes: Array<'light' | 'dark' | 'system'> = ['light', 'dark', 'system']
     const currentIndex = themes.indexOf(config.theme)
     const nextIndex = (currentIndex + 1) % themes.length
-    setTheme(themes[nextIndex])
+    await setTheme(themes[nextIndex])
   }
 
   // Get icon and label based on current theme

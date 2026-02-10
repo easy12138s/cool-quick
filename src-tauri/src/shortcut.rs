@@ -3,6 +3,7 @@ use tauri::{AppHandle, GlobalShortcutManager, Manager};
 use crate::config::AppConfig;
 use crate::database::Database;
 use crate::clipboard::skip_next_clipboard_event;
+use crate::window;
 use arboard::Clipboard;
 
 /// 注册所有全局快捷键
@@ -26,8 +27,38 @@ pub fn register_global_shortcuts(app: &AppHandle, config: &AppConfig) -> Result<
             on_paste_last_shortcut(&app_handle);
         })
         .map_err(|e| format!("Failed to register paste shortcut: {}", e))?;
+
+    // 注册抽屉开关快捷键
+    let toggle_drawer_shortcut = config.shortcut_toggle_drawer.clone();
+    if !toggle_drawer_shortcut.trim().is_empty() {
+        let app_handle = app.clone();
+        shortcut_manager
+            .register(&toggle_drawer_shortcut, move || {
+                window::toggle_drawer_window(&app_handle);
+            })
+            .map_err(|e| format!("Failed to register toggle drawer shortcut: {}", e))?;
+    }
+
+    // 注册弹窗提示开关快捷键
+    let toggle_popup_shortcut = config.shortcut_toggle_popup.clone();
+    if !toggle_popup_shortcut.trim().is_empty() {
+        let app_handle = app.clone();
+        shortcut_manager
+            .register(&toggle_popup_shortcut, move || {
+                on_toggle_popup_shortcut(&app_handle);
+            })
+            .map_err(|e| format!("Failed to register toggle popup shortcut: {}", e))?;
+    }
     
     Ok(())
+}
+
+fn on_toggle_popup_shortcut(app: &AppHandle) {
+    let mut cfg = AppConfig::load().unwrap_or_default();
+    cfg.popup_enabled = !cfg.popup_enabled;
+    if cfg.save().is_ok() {
+        let _ = app.emit_all("config-updated", &cfg);
+    }
 }
 
 /// 注销所有全局快捷键

@@ -1,4 +1,6 @@
 use std::sync::Arc;
+use std::sync::atomic::{AtomicU64, Ordering};
+use std::time::Duration;
 use tauri::{generate_context, generate_handler, Builder, Manager, SystemTray, SystemTrayEvent, SystemTrayMenu, CustomMenuItem, Icon};
 
 mod archive_task;
@@ -73,6 +75,7 @@ fn main() {
       commands::notes::notes_get_all,
       commands::notes::notes_get_by_id,
       commands::notes::notes_create,
+      commands::notes::notes_create_smart,
       commands::notes::notes_update,
       commands::notes::notes_delete,
       commands::notes::notes_search,
@@ -95,9 +98,11 @@ fn main() {
       commands::window::window_hide_floating,
       commands::window::window_toggle_floating,
       commands::window::window_show_drawer,
+      commands::window::window_open_drawer,
       commands::window::window_hide_drawer,
       commands::window::window_show_settings,
       commands::window::window_show_main,
+      commands::window::window_apply_floating_style,
       commands::window::window_start_drag,
       commands::window::window_set_position,
       commands::window::window_hide_popup,
@@ -125,17 +130,44 @@ fn main() {
 
       // 设置悬浮球初始位置到屏幕右侧
       if let Some(floating_window) = app.get_window("floating") {
+        crate::window::apply_floating_window_style(&app_handle, config.floating_window_size, config.floating_window_opacity as f64);
+
         // 获取主显示器
         if let Ok(Some(monitor)) = floating_window.primary_monitor() {
           let screen_width = monitor.size().width as i32;
           let screen_height = monitor.size().height as i32;
+          let size = config.floating_window_size as i32;
           
-          // 计算右侧位置（距离右边缘 20px，垂直居中）
-          let x = screen_width - 56 - 20;
-          let y = (screen_height - 56) / 2;
+          // 计算右侧贴边位置（垂直居中）
+          let x = screen_width - size;
+          let y = (screen_height - size) / 2;
           
           floating_window.set_position(tauri::Position::Physical(tauri::PhysicalPosition { x, y })).unwrap();
         }
+
+        let _ = app.emit_all("floating-edge-changed", serde_json::json!({
+          "side": "right",
+          "x": 0,
+          "y": 0
+        }));
+
+        let snap_seq = Arc::new(AtomicU64::new(0));
+        let snap_seq_moved = snap_seq.clone();
+        let app_for_events = app_handle.clone();
+        floating_window.on_window_event(move |event| {
+          if let tauri::WindowEvent::Moved(_) = event {
+            let seq = snap_seq_moved.fetch_add(1, Ordering::SeqCst) + 1;
+            let app_clone = app_for_events.clone();
+            let snap_seq_clone = snap_seq_moved.clone();
+            std::thread::spawn(move || {
+              std::thread::sleep(Duration::from_millis(220));
+              if snap_seq_clone.load(Ordering::SeqCst) == seq {
+                crate::window::snap_floating_window_to_edge(&app_clone);
+              }
+            });
+          }
+        });
+        
         
         // 根据配置显示或隐藏悬浮球
         if config.floating_visible {

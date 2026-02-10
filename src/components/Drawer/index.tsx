@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef, useEffect } from 'react'
+import { useState, useCallback, useRef, useEffect, useMemo } from 'react'
 import { listen } from '@tauri-apps/api/event'
 import { invoke } from '@tauri-apps/api/tauri'
 import { Search, X } from 'lucide-react'
@@ -6,6 +6,7 @@ import { NoteItem } from './NoteItem'
 import { useNoteFilter } from './useNoteFilter'
 import { useDrawerAutoHide } from './useDrawerAutoHide'
 import { useNotesStore } from '../../stores/useNotesStore'
+import { useConfigStore } from '../../stores/useConfigStore'
 import type { Note } from '../../stores/useNotesStore'
 
 interface DrawerProps {
@@ -22,6 +23,7 @@ const typeIcons: Record<string, string> = {
 }
 
 export const Drawer: React.FC<DrawerProps> = ({ notes }) => {
+  const { config } = useConfigStore()
   const [copiedId, setCopiedId] = useState<string | null>(null)
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const [drawerKey, setDrawerKey] = useState(0)
@@ -37,8 +39,8 @@ export const Drawer: React.FC<DrawerProps> = ({ notes }) => {
   } = useNoteFilter({ notes })
 
   const { handleMouseEnter, handleMouseLeave, hideDrawer } = useDrawerAutoHide({
-    enabled: true,
-    delay: 0,
+    enabled: config.drawer_auto_hide,
+    delay: config.drawer_hide_delay_ms,
   })
 
   const { toggleFavorite, deleteNote } = useNotesStore()
@@ -50,7 +52,8 @@ export const Drawer: React.FC<DrawerProps> = ({ notes }) => {
   useEffect(() => {
     const unlisten = listen('window-shown', (event) => {
       // @ts-ignore - payload type is unknown but we know structure
-      if ('drawer' in event.payload && (event.payload as any).drawer === true) {
+      const payload = event.payload as any
+      if (payload?.window === 'drawer') {
         // 重置状态
         setSelectedIds(new Set())
         setSearchQuery('')
@@ -69,6 +72,17 @@ export const Drawer: React.FC<DrawerProps> = ({ notes }) => {
       unlisten.then(f => f())
     }
   }, [])
+
+  const sortedNotes = useMemo(() => {
+    const base = [...filteredNotes]
+    if (config.drawer_sort === 'frequent') {
+      base.sort((a, b) => (b.use_count ?? 0) - (a.use_count ?? 0))
+    } else {
+      base.sort((a, b) => (b.created_at ?? 0) - (a.created_at ?? 0))
+    }
+    const limit = Math.max(1, config.drawer_default_limit || 10)
+    return base.slice(0, limit)
+  }, [config.drawer_default_limit, config.drawer_sort, filteredNotes])
 
   // 处理复制
   const handleCopy = useCallback(
@@ -176,7 +190,7 @@ export const Drawer: React.FC<DrawerProps> = ({ notes }) => {
 
         {/* 笔记数量 */}
         <div className="text-xs text-slate-500">
-          共 {filteredNotes.length} 条笔记
+          显示 {sortedNotes.length} / {filteredNotes.length} 条
         </div>
 
         {/* 类型筛选 */}
@@ -211,7 +225,7 @@ export const Drawer: React.FC<DrawerProps> = ({ notes }) => {
       {/* Notes List */}
       <div ref={scrollContainerRef} key={drawerKey} className="flex-1 min-h-0 overflow-y-auto scrollbar-thin-extra">
         <div className="space-y-2 p-3">
-          {filteredNotes.map((note, index) => (
+          {sortedNotes.map((note, index) => (
             <NoteItem
               key={`${drawerKey}-${note.id}`}
               note={note}
@@ -225,7 +239,7 @@ export const Drawer: React.FC<DrawerProps> = ({ notes }) => {
             />
           ))}
 
-          {filteredNotes.length === 0 && (
+          {sortedNotes.length === 0 && (
             <div className="flex flex-col items-center justify-center h-32 text-slate-400">
               <div className="w-12 h-12 rounded-xl bg-slate-100 flex items-center justify-center mb-2">
                 <span className="text-2xl">📝</span>

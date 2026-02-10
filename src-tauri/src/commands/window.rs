@@ -25,6 +25,12 @@ pub async fn window_show_drawer(app: AppHandle) -> Result<(), String> {
 }
 
 #[command]
+pub async fn window_open_drawer(app: AppHandle) -> Result<(), String> {
+    crate::window::open_drawer_window(&app);
+    Ok(())
+}
+
+#[command]
 pub async fn window_hide_drawer(app: AppHandle) -> Result<(), String> {
     crate::window::hide_drawer_window(&app);
     Ok(())
@@ -39,6 +45,12 @@ pub async fn window_show_settings(app: AppHandle) -> Result<(), String> {
 #[command]
 pub async fn window_show_main(app: AppHandle) -> Result<(), String> {
   crate::window::show_main_window(&app);
+  Ok(())
+}
+
+#[command]
+pub async fn window_apply_floating_style(app: AppHandle, size: u32, opacity: f64) -> Result<(), String> {
+  crate::window::apply_floating_window_style(&app, size, opacity);
   Ok(())
 }
 
