@@ -1,5 +1,5 @@
 use std::sync::Arc;
-use tauri::{generate_context, generate_handler, Builder, Manager, SystemTray, SystemTrayEvent, SystemTrayMenu, CustomMenuItem};
+use tauri::{generate_context, generate_handler, Builder, Manager, SystemTray, SystemTrayEvent, SystemTrayMenu, CustomMenuItem, Icon};
 
 mod archive_task;
 mod clipboard;
@@ -106,6 +106,14 @@ fn main() {
     ])
     .setup(move |app| {
       let app_handle = app.handle();
+
+      let app_icon_ico = Icon::Raw(include_bytes!("../icons/icon.ico").to_vec());
+      for label in ["main", "floating", "drawer", "popup"] {
+        if let Some(window) = app.get_window(label) {
+          let _ = window.set_icon(app_icon_ico.clone());
+        }
+      }
+      let _ = app.tray_handle().set_icon(Icon::Raw(include_bytes!("../icons/icon.png").to_vec()));
       
       // 注册全局快捷键
       if let Err(e) = shortcut::register_global_shortcuts(&app_handle, &config) {

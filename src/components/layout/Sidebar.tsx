@@ -10,6 +10,7 @@ import {
   ChevronRight,
 } from 'lucide-react'
 import { useState } from 'react'
+import coolQuickIcon from '../../assets/coolquick-icon.svg'
 
 const menuItems = [
   { path: '/', label: 'Dashboard', icon: LayoutDashboard },
@@ -32,7 +33,7 @@ export const Sidebar: React.FC = () => {
         {!collapsed && (
           <div className="flex items-center gap-2">
             <div className="w-8 h-8 bg-gradient-to-br from-primary-500 to-purple-600 rounded-lg flex items-center justify-center text-white">
-              📋
+              <img src={coolQuickIcon} alt="CoolQuick" className="w-5 h-5" draggable={false} />
             </div>
             <span className="font-bold text-gray-900 dark:text-white">CoolQuick</span>
           </div>

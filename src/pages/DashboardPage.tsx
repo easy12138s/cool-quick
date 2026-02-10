@@ -11,9 +11,7 @@ import {
   ResponsiveContainer,
   PieChart,
   Pie,
-  Cell,
-  LineChart,
-  Line
+  Cell
 } from 'recharts'
 import { listen } from '@tauri-apps/api/event'
 import { useNotesStore } from '../stores/useNotesStore'
