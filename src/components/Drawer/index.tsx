@@ -198,63 +198,63 @@ export const Drawer: React.FC<DrawerProps> = ({ notes, onRefresh }) => {
           </div>
         </div>
 
-      {/* 类型筛选 */}
-      <div className="flex items-center gap-1.5 mt-2 overflow-x-auto scrollbar-hide pb-1">
-        <button
-          onClick={() => setSelectedType(null)}
-          className={`px-2.5 py-1 text-[11px] rounded-full whitespace-nowrap transition-colors ${
-            selectedType === null
-              ? 'bg-primary text-white'
-              : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-          }`}
-        >
-          全部
-        </button>
-        {uniqueTypes.map(type => (
+        {/* 类型筛选 */}
+        <div className="flex items-center gap-1.5 mt-2 overflow-x-auto scrollbar-hide pb-1">
           <button
-            key={type}
-            onClick={() => setSelectedType(selectedType === type ? null : type)}
-            className={`px-2 py-1 text-[11px] rounded-full whitespace-nowrap transition-colors flex items-center gap-1 ${
-              selectedType === type
+            onClick={() => setSelectedType(null)}
+            className={`px-2.5 py-1 text-[11px] rounded-full whitespace-nowrap transition-colors ${
+              selectedType === null
                 ? 'bg-primary text-white'
                 : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
             }`}
           >
-            <span>{typeIcons[type]}</span>
-            <span className="capitalize">{type}</span>
+            全部
           </button>
-        ))}
+          {uniqueTypes.map(type => (
+            <button
+              key={type}
+              onClick={() => setSelectedType(selectedType === type ? null : type)}
+              className={`px-2 py-1 text-[11px] rounded-full whitespace-nowrap transition-colors flex items-center gap-1 ${
+                selectedType === type
+                  ? 'bg-primary text-white'
+                  : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+              }`}
+            >
+              <span>{typeIcons[type]}</span>
+              <span className="capitalize">{type}</span>
+            </button>
+          ))}
+        </div>
       </div>
-    </div>
 
-    {/* Notes List */}
-    <div ref={scrollContainerRef} className="flex-1 overflow-y-auto scrollbar-thin">
-      <div className="space-y-2 p-3">
-        {filteredNotes.map((note, index) => (
-          <NoteItem
-            key={note.id}
-            note={note}
-            isCopied={copiedId === note.id}
-            isSelected={selectedIds.has(note.id)}
-            onCopy={handleCopy}
-            onDelete={deleteNote}
-            onToggleFavorite={toggleFavorite}
-            onSelect={handleSelect}
-            index={index}
-          />
-        ))}
+      {/* Notes List */}
+      <div ref={scrollContainerRef} className="flex-1 overflow-y-auto scrollbar-thin">
+        <div className="space-y-2 p-3">
+          {filteredNotes.map((note, index) => (
+            <NoteItem
+              key={note.id}
+              note={note}
+              isCopied={copiedId === note.id}
+              isSelected={selectedIds.has(note.id)}
+              onCopy={handleCopy}
+              onDelete={deleteNote}
+              onToggleFavorite={toggleFavorite}
+              onSelect={handleSelect}
+              index={index}
+            />
+          ))}
 
-        {filteredNotes.length === 0 && (
-          <div className="flex flex-col items-center justify-center h-32 text-slate-400">
-            <div className="w-12 h-12 rounded-xl bg-slate-100 flex items-center justify-center mb-2">
-              <span className="text-2xl">📝</span>
+          {filteredNotes.length === 0 && (
+            <div className="flex flex-col items-center justify-center h-32 text-slate-400">
+              <div className="w-12 h-12 rounded-xl bg-slate-100 flex items-center justify-center mb-2">
+                <span className="text-2xl">📝</span>
+              </div>
+              <p className="text-sm">{searchQuery ? '未找到匹配的笔记' : '暂无笔记'}</p>
+              <p className="text-xs text-slate-400 mt-1">复制内容会自动保存</p>
             </div>
-            <p className="text-sm">{searchQuery ? '未找到匹配的笔记' : '暂无笔记'}</p>
-            <p className="text-xs text-slate-400 mt-1">复制内容会自动保存</p>
-          </div>
-        )}
+          )}
+        </div>
       </div>
-    </div>
 
       {/* Footer */}
       <div className="flex-shrink-0 px-3 py-2 border-t border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800">
