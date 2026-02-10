@@ -234,7 +234,7 @@ export const NotesPage: React.FC = () => {
   }
 
   return (
-    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6">
+    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="h-full flex flex-col space-y-4">
       {/* Notification */}
       <AnimatePresence>
         {notification && (
@@ -367,17 +367,18 @@ export const NotesPage: React.FC = () => {
       </div>
 
       {/* Notes List */}
-      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
+      <div className="flex-1 bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden flex flex-col min-h-0">
         {paginatedNotes.length === 0 ? (
-          <div className="text-center py-16">
+          <div className="flex-1 flex flex-col items-center justify-center text-center py-16">
             <ClipboardList size={64} className="mx-auto text-gray-300 mb-4" />
             <p className="text-gray-500 text-lg">暂无笔记</p>
             <p className="text-gray-400 text-sm mt-1">复制内容时会自动保存到这里</p>
           </div>
         ) : (
           <>
-            <div className="space-y-3 p-4">
-              {paginatedNotes.map((note, index) => (
+            <div className="flex-1 overflow-y-auto scrollbar-thin p-4">
+              <div className="space-y-3">
+                {paginatedNotes.map((note, index) => (
                 <motion.div
                   key={note.id}
                   initial={{ opacity: 0, y: 10 }}
@@ -487,6 +488,7 @@ export const NotesPage: React.FC = () => {
                   </div>
                 </motion.div>
               ))}
+              </div>
             </div>
 
             {/* Pagination */}

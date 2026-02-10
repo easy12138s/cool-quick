@@ -175,31 +175,9 @@ export const Drawer: React.FC<DrawerProps> = ({ notes, onRefresh }) => {
           )}
         </div>
 
-        {/* 工具栏 */}
-        <div className="flex items-center justify-between">
-          {/* 批量操作 */}
-          <div className="flex items-center gap-2">
-            <button
-              onClick={handleSelectAll}
-              className="flex items-center gap-1.5 px-2 py-1.5 text-xs text-slate-600 hover:text-primary hover:bg-primary/10 rounded-lg transition-colors"
-              title="全选 (Ctrl+A)"
-            >
-              {hasSelection ? <CheckSquare size={14} /> : <Square size={14} />}
-              <span>{hasSelection ? `${selectedIds.size} 条` : filteredNotes.length} 条</span>
-            </button>
-
-            {hasSelection && (
-              <motion.button
-                initial={{ opacity: 0, scale: 0.9 }}
-                animate={{ opacity: 1, scale: 1 }}
-                onClick={handleBatchDelete}
-                className="flex items-center gap-1 px-2 py-1.5 text-xs text-rose-600 hover:bg-rose-50 rounded-lg transition-colors"
-              >
-                <Trash2 size={12} />
-                删除
-              </motion.button>
-            )}
-          </div>
+        {/* 笔记数量 */}
+        <div className="text-xs text-slate-500">
+          共 {filteredNotes.length} 条笔记
         </div>
 
         {/* 类型筛选 */}
