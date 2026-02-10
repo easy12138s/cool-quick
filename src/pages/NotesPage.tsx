@@ -376,16 +376,15 @@ export const NotesPage: React.FC = () => {
           </div>
         ) : (
           <>
-            <div className="max-h-[calc(100vh-200px)] overflow-y-auto">
-              <div className="space-y-2 p-4">
-                {paginatedNotes.map((note, index) => (
-                  <motion.div
-                    key={note.id}
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: index * 0.05 }}
-                    className="p-5 sm:p-6 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors group"
-                  >
+            <div className="space-y-3 p-4">
+              {paginatedNotes.map((note, index) => (
+                <motion.div
+                  key={note.id}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: index * 0.05 }}
+                  className="p-5 sm:p-6 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors group rounded-lg border border-gray-100 dark:border-gray-700"
+                >
                   <div className="flex items-start gap-4">
                     {/* Type Icon */}
                     <div
@@ -489,7 +488,6 @@ export const NotesPage: React.FC = () => {
                 </motion.div>
               ))}
             </div>
-          </div>
 
             {/* Pagination */}
             {totalPages > 1 && (
