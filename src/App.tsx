@@ -9,7 +9,7 @@ import { ArchivePage } from './pages/ArchivePage'
 import { SettingsPage } from './pages/SettingsPage'
 import { SearchPage } from './pages/SearchPage'
 import { FavoritesPage } from './pages/FavoritesPage'
-import { StatisticsPage } from './pages/StatisticsPage'
+
 import { FloatingWindow } from './components/FloatingWindow/index'
 import { Drawer } from './components/Drawer'
 import { Popup } from './components/Popup'
@@ -51,7 +51,6 @@ const mainRouter = createHashRouter([
       { path: 'favorites', element: <FavoritesPage /> },
       { path: 'archive', element: <ArchivePage /> },
       { path: 'search', element: <SearchPage /> },
-      { path: 'statistics', element: <StatisticsPage /> },
       { path: 'settings', element: <SettingsPage /> },
     ],
   },

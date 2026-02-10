@@ -6,7 +6,6 @@ import {
   Star,
   Archive,
   Settings,
-  BarChart3,
   ChevronLeft,
   ChevronRight,
 } from 'lucide-react'
@@ -17,7 +16,6 @@ const menuItems = [
   { path: '/notes', label: '全部笔记', icon: ClipboardList },
   { path: '/favorites', label: '收藏夹', icon: Star },
   { path: '/archive', label: '归档箱', icon: Archive },
-  { path: '/statistics', label: '统计分析', icon: BarChart3 },
   { path: '/settings', label: '设置', icon: Settings },
 ]
 
