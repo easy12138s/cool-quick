@@ -141,10 +141,10 @@
 }
 
 @layer components {
-  /* 滚动条样式 */
+  /* 滚动条样式 - 极简风格 */
   .scrollbar-thin::-webkit-scrollbar {
-    width: 6px;
-    height: 6px;
+    width: 4px;
+    height: 4px;
   }
 
   .scrollbar-thin::-webkit-scrollbar-track {
@@ -152,12 +152,36 @@
   }
 
   .scrollbar-thin::-webkit-scrollbar-thumb {
-    background: hsl(var(--muted-foreground) / 0.3);
-    border-radius: 3px;
+    background: hsl(var(--muted-foreground) / 0.15);
+    border-radius: 4px;
+    transition: background 0.2s ease;
+  }
+
+  .scrollbar-thin:hover::-webkit-scrollbar-thumb {
+    background: hsl(var(--muted-foreground) / 0.25);
   }
 
   .scrollbar-thin::-webkit-scrollbar-thumb:hover {
-    background: hsl(var(--muted-foreground) / 0.5);
+    background: hsl(var(--muted-foreground) / 0.4);
+  }
+
+  /* 超细滚动条 - 用于抽屉等组件 */
+  .scrollbar-thin-extra::-webkit-scrollbar {
+    width: 3px;
+    height: 3px;
+  }
+
+  .scrollbar-thin-extra::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .scrollbar-thin-extra::-webkit-scrollbar-thumb {
+    background: hsl(var(--muted-foreground) / 0.1);
+    border-radius: 2px;
+  }
+
+  .scrollbar-thin-extra:hover::-webkit-scrollbar-thumb {
+    background: hsl(var(--muted-foreground) / 0.2);
   }
 
   .scrollbar-hide::-webkit-scrollbar {

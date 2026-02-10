@@ -24,6 +24,7 @@ const typeIcons: Record<string, string> = {
 export const Drawer: React.FC<DrawerProps> = ({ notes, onRefresh }) => {
   const [copiedId, setCopiedId] = useState<string | null>(null)
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
+  const [drawerKey, setDrawerKey] = useState(0)
   const searchInputRef = useRef<HTMLInputElement>(null)
 
   const {
@@ -53,10 +54,13 @@ export const Drawer: React.FC<DrawerProps> = ({ notes, onRefresh }) => {
         setSelectedIds(new Set())
         setSearchQuery('')
         setSelectedType(null)
+        setCopiedId(null)
         // 重置滚动位置到顶部
         if (scrollContainerRef.current) {
           scrollContainerRef.current.scrollTop = 0
         }
+        // 强制重新渲染所有笔记项以重置内部状态（如删除按钮）
+        setDrawerKey(prev => prev + 1)
       }
     })
 
@@ -228,11 +232,11 @@ export const Drawer: React.FC<DrawerProps> = ({ notes, onRefresh }) => {
       </div>
 
       {/* Notes List */}
-      <div ref={scrollContainerRef} className="flex-1 overflow-y-auto scrollbar-thin">
+      <div ref={scrollContainerRef} key={drawerKey} className="flex-1 overflow-y-auto scrollbar-thin-extra">
         <div className="space-y-2 p-3">
           {filteredNotes.map((note, index) => (
             <NoteItem
-              key={note.id}
+              key={`${drawerKey}-${note.id}`}
               note={note}
               isCopied={copiedId === note.id}
               isSelected={selectedIds.has(note.id)}
