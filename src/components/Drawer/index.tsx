@@ -42,6 +42,9 @@ export const Drawer: React.FC<DrawerProps> = ({ notes, onRefresh }) => {
 
   const { toggleFavorite, deleteNote } = useNotesStore()
 
+  // 获取滚动容器引用
+  const scrollContainerRef = useRef<HTMLDivElement>(null)
+
   // 监听抽屉显示事件，重置状态
   useEffect(() => {
     const unlisten = listen('window-shown', (event) => {
@@ -50,6 +53,10 @@ export const Drawer: React.FC<DrawerProps> = ({ notes, onRefresh }) => {
         setSelectedIds(new Set())
         setSearchQuery('')
         setSelectedType(null)
+        // 重置滚动位置到顶部
+        if (scrollContainerRef.current) {
+          scrollContainerRef.current.scrollTop = 0
+        }
       }
     })
 
@@ -221,7 +228,7 @@ export const Drawer: React.FC<DrawerProps> = ({ notes, onRefresh }) => {
     </div>
 
     {/* Notes List */}
-    <div className="flex-1 overflow-y-auto scrollbar-thin">
+    <div ref={scrollContainerRef} className="flex-1 overflow-y-auto scrollbar-thin">
       <div className="space-y-2 p-3">
         {filteredNotes.map((note, index) => (
           <NoteItem
