@@ -4,7 +4,7 @@ import { useConfigStore } from '../../stores/useConfigStore'
 import { invoke } from '@tauri-apps/api/tauri'
 
 export const Header: React.FC = () => {
-  const { config, effectiveTheme, setTheme, updateConfig } = useConfigStore()
+  const { config, setTheme, updateConfig } = useConfigStore()
 
   // Toggle floating window visibility
   const toggleFloatingWindow = async () => {

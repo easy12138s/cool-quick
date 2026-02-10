@@ -1,7 +1,7 @@
 import { useState, useCallback, useRef, useEffect } from 'react'
 import { listen } from '@tauri-apps/api/event'
 import { invoke } from '@tauri-apps/api/tauri'
-import { Search, X, CheckSquare, Square, Trash2 } from 'lucide-react'
+import { Search, X } from 'lucide-react'
 import { NoteItem } from './NoteItem'
 import { useNoteFilter } from './useNoteFilter'
 import { useDrawerAutoHide } from './useDrawerAutoHide'
@@ -21,7 +21,7 @@ const typeIcons: Record<string, string> = {
   text: '📝',
 }
 
-export const Drawer: React.FC<DrawerProps> = ({ notes, onRefresh }) => {
+export const Drawer: React.FC<DrawerProps> = ({ notes }) => {
   const [copiedId, setCopiedId] = useState<string | null>(null)
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const [drawerKey, setDrawerKey] = useState(0)
@@ -49,6 +49,7 @@ export const Drawer: React.FC<DrawerProps> = ({ notes, onRefresh }) => {
   // 监听抽屉显示事件，重置状态
   useEffect(() => {
     const unlisten = listen('window-shown', (event) => {
+      // @ts-ignore - payload type is unknown but we know structure
       if ('drawer' in event.payload && (event.payload as any).drawer === true) {
         // 重置状态
         setSelectedIds(new Set())
@@ -143,8 +144,6 @@ export const Drawer: React.FC<DrawerProps> = ({ notes, onRefresh }) => {
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [handleSelectAll, handleBatchDelete, selectedIds.size])
-
-  const hasSelection = selectedIds.size > 0
 
   return (
     <div

@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
-import { ClipboardList, Star, Clock, TrendingUp, Calendar, Tag } from 'lucide-react'
+import { ClipboardList, Star, Clock, TrendingUp, Tag, BarChart3 } from 'lucide-react'
 import {
   BarChart,
   Bar,
@@ -17,8 +17,6 @@ import {
 } from 'recharts'
 import { listen } from '@tauri-apps/api/event'
 import { useNotesStore } from '../stores/useNotesStore'
-import { StatCard } from '../components/dashboard/StatCard'
-import { TypeChart } from '../components/dashboard/TypeChart'
 import { RecentActivity } from '../components/dashboard/RecentActivity'
 import { QuickActions } from '../components/dashboard/QuickActions'
 
@@ -141,7 +139,7 @@ export const DashboardPage: React.FC = () => {
   const peakHour = hourlyStats.indexOf(Math.max(...hourlyStats))
 
   return (
-    <div className="space-y-6 pb-8">
+    <div className="h-full overflow-y-auto scrollbar-thin space-y-6 pb-8">
       {/* Welcome */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
@@ -232,7 +230,7 @@ export const DashboardPage: React.FC = () => {
       {/* Time Range Selector */}
       <div className="flex items-center justify-between">
         <h2 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
-          <BarChart size={20} />
+          <BarChart3 size={20} />
           详细统计
         </h2>
         <div className="flex bg-gray-100 dark:bg-gray-800 rounded-lg p-1">
@@ -318,50 +316,12 @@ export const DashboardPage: React.FC = () => {
 
       {/* Hourly Activity & Recent Activity Row */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Hourly Activity */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.6 }}
-          className="lg:col-span-2 bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6"
-        >
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-            24小时活跃分布
-          </h3>
-          <div className="h-64">
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart
-                data={hourlyStats.map((count, hour) => ({ hour: `${hour}:00`, count }))}
-              >
-                <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                <XAxis dataKey="hour" tick={{ fontSize: 12 }} interval={2} />
-                <YAxis tick={{ fontSize: 12 }} />
-                <Tooltip
-                  contentStyle={{
-                    backgroundColor: 'rgba(255, 255, 255, 0.95)',
-                    border: '1px solid #e5e7eb',
-                    borderRadius: '8px'
-                  }}
-                />
-                <Line
-                  type="monotone"
-                  dataKey="count"
-                  stroke="#8b5cf6"
-                  strokeWidth={2}
-                  dot={false}
-                  activeDot={{ r: 4 }}
-                />
-              </LineChart>
-            </ResponsiveContainer>
-          </div>
-        </motion.div>
-
         {/* Recent Activity & Quick Actions */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.7 }}
-          className="space-y-6"
+          className="lg:col-span-3 grid grid-cols-1 md:grid-cols-2 gap-6"
         >
           <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
             <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
@@ -385,7 +345,7 @@ export const DashboardPage: React.FC = () => {
           类型统计详情
         </h3>
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-          {typeStats.map((type, index) => (
+          {typeStats.map((type) => (
             <div key={type.name} className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
               <div className="w-3 h-3 rounded-full" style={{ backgroundColor: type.color }} />
               <div>

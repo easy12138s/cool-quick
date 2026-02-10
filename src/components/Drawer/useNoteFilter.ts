@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback, useRef, useEffect } from 'react'
+import { useState, useMemo, useRef, useEffect } from 'react'
 import type { Note } from '../../stores/useNotesStore'
 
 interface UseNoteFilterProps {

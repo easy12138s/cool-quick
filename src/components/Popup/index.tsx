@@ -1,6 +1,6 @@
-import { useState, useCallback, useEffect, useRef } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Check, X, Copy, Sparkles, Shield, Eye, EyeOff, ExternalLink } from 'lucide-react'
+import { Check, X, Copy, Sparkles, Eye, EyeOff, ExternalLink } from 'lucide-react'
 import { useCountdown } from './useCountdown'
 import { useClipboardCopy } from './useClipboardCopy'
 import { typeConfig, maskPassword, truncateContent, formatCodePreview } from './utils'

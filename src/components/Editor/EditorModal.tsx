@@ -48,7 +48,6 @@ export const EditorModal: React.FC<EditorModalProps> = ({
   // 处理保存
   const handleSave = async () => {
     const content = editorRef.current?.getHTML() || ''
-    const textContent = editorRef.current?.getText() || ''
 
     // 如果内容只是简单的 <p> 标签包裹的纯文本，则提取纯文本
     // 这样可以避免为简单文本添加不必要的 HTML 标签
@@ -146,7 +145,7 @@ export const EditorModal: React.FC<EditorModalProps> = ({
               <RichTextEditor
                 ref={editorRef}
                 placeholder="开始写作..."
-                onChange={html => {
+                onChange={() => {
                   // 实时保存或自动保存可以在这里实现
                 }}
               />

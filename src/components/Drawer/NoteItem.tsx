@@ -39,7 +39,7 @@ const stripHtml = (html: string): string => {
 }
 
 export const NoteItem = forwardRef<HTMLDivElement, NoteItemProps>(
-  ({ note, isCopied, isSelected, onCopy, onDelete, onToggleFavorite, onSelect, index }, ref) => {
+  ({ note, isCopied, isSelected, onCopy, onDelete, onSelect }, ref) => {
     const [showDelete, setShowDelete] = useState(false)
     const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
     const isLongPress = useRef(false)
@@ -102,14 +102,6 @@ export const NoteItem = forwardRef<HTMLDivElement, NoteItemProps>(
         onDelete(note.id)
       },
       [note.id, onDelete]
-    )
-
-    const handleFavorite = useCallback(
-      (e: React.MouseEvent) => {
-        e.stopPropagation()
-        onToggleFavorite(note.id, note.is_favorite)
-      },
-      [note.id, note.is_favorite, onToggleFavorite]
     )
 
     const colors = useMemo(() => {
